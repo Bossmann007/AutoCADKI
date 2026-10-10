@@ -180,7 +180,7 @@ Sources: DOU copy of Res. 882 (in.gov.br, via gov.br PDF, 2021 print) [V:24]; Re
 Design choices
 - Templates over free-form code generation for repeatable trailer families (CadQuery and build123d are both Apache-2.0 [V:1,2]).
 - Pick one kernel lib: build123d has DXF/SVG exporters with ISO line types and viewport projection [V:4]; CadQuery has the larger ecosystem and is the code format of CAD-Recode-style research (U). I lean toward build123d for drawings; CadQuery is acceptable.
-- Keep rules and limits in a versioned data file (e.g. `regs/conTRAN_882.yaml`) with article reference and date, so changes (like 1.005/2024) are a data edit.
+- Keep rules and limits in a versioned data file (e.g. `regs/contran_882.yaml`) with article reference and date, so changes (like 1.005/2024) are a data edit.
 - Single source of truth: the parameter spec produces 3D, 2D, and BOM, so they cannot disagree.
 - AutoCAD for Mac is a finishing/review tool, not a pipeline component (no .NET/COM, accoreconsole not documented on Mac).
 
@@ -195,6 +195,8 @@ Design choices
 8. Zoo/Autodesk/Onshape offerings change fast; re-check before committing [V:14-17 are dated].
 
 ## 8. Suggested MVP
+
+> **Update 2026-10-10:** the user chose **carreta tanque (tank semirreboque)** as the MVP and **DWG** as a required output. The generic suggestion below (graneleiro/prancha) is superseded by the tank addendum (section 8.1); the pipeline stays the same.
 - One trailer type (suggest: semirreboque **carga seca / graneleiro** or **prancha** 3-axle, whichever you build most) and 4 to 6 parts: longarina (I-beam/chassis rail), travessa, placa de quinta roda / pino rei plate, suporte de eixo, painel lateral, para-choque (traseiro).
 - Input: a form or JSON (comprimento, largura, número de eixos, espessuras, material), plus LLM front-end that converts Portuguese text to the JSON.
 - Output per part: DXF R2018 (dimensioned, layers, title block) + DWG via AutoCAD Mac; STEP; BOM CSV; PDF preview.
@@ -202,10 +204,17 @@ Design choices
 - Success criteria: a shop can cut one part from the DXF without questions; dims match the spec exactly; AutoCAD opens with no dimension errors.
 - Time order: (1) one part end to end by hand-written template; (2) add JSON spec + LLM; (3) validators; (4) assembly + BOM; (5) DWG via AutoCAD script.
 
+### 8.1 Tank trailer addendum (all items U: not researched yet)
+- Tank-specific geometry: cylindrical/elliptical shell, heads (tampos), baffles (quebra-ondas), manholes (bocas de visita), compartments, valves/discharge piping, sub-frame/chassis supports. Curved shells need 3D B-rep + developed (unrolled) flat patterns for plate cutting; plain DXF part drawings are not enough.
+- Capacity (litros) must come from computed volume of the shell, not from the LLM; validate in code.
+- Regulation beyond CONTRAN 882: if the tank carries dangerous goods (produtos perigosos) there are ANTT and INMETRO rules (tank construction, periodic inspection, ABNT NBR standards, MOPP for drivers). Fuel/chemicals/food each change requirements. Which norms apply, and their numbers, are **not verified**: research before coding any rule.
+- Material (carbon steel, stainless, aluminium), thickness and pressure/vacuum rating are structural/safety decisions for the responsible engineer, not the AI.
+- Open: cargo type, capacity, material, compartments, reference drawing.
+
 ## 9. Open questions for the user
-1. Which trailer type(s) and which sizes? Brand/catalogue constraints (eixos, suspensão supplier)?
+1. (Answered: tank trailer; sizes/cargo/material still open, see 8.1.) Which trailer type(s) and which sizes? Brand/catalogue constraints (eixos, suspensão supplier)?
 2. Do you make the trailers (shop) or draw for a client? Do you hold CAT / registration (Portaria 989/990/2022)? Who is the responsible engineer (ART/CREA)?
-3. Output must be DWG or is DXF acceptable to the cutting vendors? Which CAM/nesting software?
+3. (Answered: DWG required.) Output must be DWG or is DXF acceptable to the cutting vendors? Which CAM/nesting software?
 4. AutoCAD for Mac version year (`ABOUT`) and does IMPORT list STEP in your menu? Is a Windows machine/VM available?
 5. Drawing standard: ABNT NBR 10067/10126/8403 style? (NBR drawing norms not researched [U]). Units mm, sheet sizes (A3/A4), title block template?
 6. Weld notation (ABNT/ISO/AWS)? Material/paint standards?
