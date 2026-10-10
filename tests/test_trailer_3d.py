@@ -38,6 +38,12 @@ def test_envelope_within_contran(groups):
     assert 2 * ymax <= 2600                            # CONTRAN 882 max width
 
 
+def test_landing_legs_2500_from_kingpin(groups):
+    kp = axle_positions(A, S)["kingpin_x"]
+    legs = [wp for wp in groups["CHASSI"] if abs(wp.val().Center().x - (kp + 2500)) < 1e-6]
+    assert len(legs) == 4          # 2 legs + 2 foot plates, left and right
+
+
 def test_wheels_centred_on_axle_positions(groups):
     xs = sorted({round(wp.val().Center().x) for wp in groups["EIXOS"]})
     assert xs == [round(x) for x in axle_positions(A, S)["axle_x"]]

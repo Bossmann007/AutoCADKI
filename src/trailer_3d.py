@@ -22,6 +22,7 @@ class GearSpec:
     rail_spacing: float = 970.0      # centre to centre
     rail_width: float = 80.0
     rail_height: float = 320.0
+    landing_leg_from_kingpin: float = 2500.0   # pe de apoio, owner confirmed 2026-10-10
     rail_top_z: float = 1380.0       # tank bottom rests here (STEP: 1353-1399 above ground, tank slopes slightly)
     ring_count: int = 9              # outer stiffening rings seen in the photo (orange bands), spacing ASSUMED
     ring_width: float = 60.0
@@ -73,8 +74,9 @@ def build_trailer(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec()
     g["PINO_REI"].append(cq.Workplane("XY").circle(25.4).extrude(100).translate((kp, 0, gear.rail_top_z - 170)))
     for s in (-1, 1):                                                                                  # landing legs
         y = s * (half + 300)
-        g["CHASSI"].append(_box(kp + 1200 - 70, kp + 1200 + 70, y - 70, y + 70, 380, rz0))
-        g["CHASSI"].append(_box(kp + 1200 - 200, kp + 1200 + 200, y - 150, y + 150, 360, 380))
+        lx = kp + gear.landing_leg_from_kingpin
+        g["CHASSI"].append(_box(lx - 70, lx + 70, y - 70, y + 70, 380, rz0))
+        g["CHASSI"].append(_box(lx - 200, lx + 200, y - 150, y + 150, 360, 380))
 
     zax = gear.tire_radius
     for x in axle_x:

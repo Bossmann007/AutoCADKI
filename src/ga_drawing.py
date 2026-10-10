@@ -119,7 +119,7 @@ def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), nam
     s.rect(X(x_front), Y(rz0), X(x_rear), Y(gear.rail_top_z), "CHASSI")
     s.rect(X(kp - 450), Y(gear.rail_top_z - 70), X(kp + 450), Y(gear.rail_top_z - 20), "CHASSI")
     s.rect(X(kp - 25.4), Y(gear.rail_top_z - 170), X(kp + 25.4), Y(gear.rail_top_z - 70), "PINO_REI")
-    lx = kp + 1200
+    lx = kp + gear.landing_leg_from_kingpin
     s.rect(X(lx - 70), Y(380), X(lx + 70), Y(rz0), "CHASSI")
     s.rect(X(lx - 200), Y(360), X(lx + 200), Y(380), "CHASSI")
     s.rect(X(x_rear), Y(500), X(x_rear + 80), Y(1100), "CHASSI")                      # rear bumper bar
@@ -136,6 +136,7 @@ def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), nam
         s.line((X(x), Y(0) - 300), (X(x), Y(zax + 700)), "CENTER")
         s.text(f"E{i}", (X(x) + 80, Y(zax + 760)), TXT, "TEXT")
     s.text("PINO REI", (X(kp) + 80, Y(gear.rail_top_z + 100)), TXT)
+    s.text("PE DE APOIO", (X(lx) + 80, Y(380) - 200), TXT)
     s.line((X(kp), Y(rz0 - 300)), (X(kp), Y(gear.rail_top_z + 100)), "CENTER")
 
     # --- dimensions (side view)
@@ -143,6 +144,7 @@ def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), nam
     xs = [0, kp] + axle_x + [L]           # chain from the front junction to the rear junction
     for p, q in zip(xs, xs[1:]):
         s.dim((X(p), G), (X(q), G), (0, dy1))
+    s.dim((X(kp), G), (X(lx), G), (0, G - 300))                       # kingpin -> landing leg
     s.dim((X(-ho), G), (X(0), G), (0, dy2))
     s.dim((X(0), G), (X(L), G), (0, dy2))
     s.dim((X(L), G), (X(L + ho), G), (0, dy2))

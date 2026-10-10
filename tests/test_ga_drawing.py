@@ -20,7 +20,7 @@ def doc(tmp_path_factory):
 def test_expected_dimensions_present(doc):
     pos = axle_positions(AXLES, SHELL)
     vals = {round(e.get_measurement()) for e in doc.modelspace().query("DIMENSION")}
-    for v in (700, 5250, 2450, 1250, 1500, 12400, 2290, SHELL.head_depth_outer, SHELL.overall_length):
+    for v in (700, 2500, 5250, 2450, 1250, 1500, 12400, 2290, SHELL.head_depth_outer, SHELL.overall_length):
         assert round(v) in vals, v
     assert pos["kingpin_x"] == 700  # junction -> kingpin
 

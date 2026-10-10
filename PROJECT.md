@@ -51,6 +51,7 @@ Two presets in `src/presets.py` (default `52k`); the engineer replaces everythin
   kingpin -> axle 1 = 5640, loads kingpin 13.5 t / axles 31.2 t / total 44.7 t.
 - Torispherical "ASME 10" heads ASSUMED R = Di, r = 0.10 Di (our head = 1,188 L vs the sketch's 1,200 L).
 - Loads per axle are NOT in the 52k documents: sketch loads reused, axle 1 = 10 t, axles 2-4 equal (ASSUMED).
+- Landing legs (pes de apoio) 2500 mm from the kingpin (owner confirmed 2026-10-10).
 - Baffles (3): positions ASSUMED at axle 1, axles 2-3 mid, axle 4 (owner: "per the suspension"); outer stiffening rings (9) evenly spaced (ASSUMED).
 - Taken from the 52 m3 STEP assembly (Creo, 282 MB, 464 products, 5,922 solids; not in the repo): tyre OD 1105 x 275, dual gap 60,
   track 1940, chassis rails 80 x 320 at 970 centres, tank bottom ~1,353-1,399 mm above ground, tank axis slopes ~0.4 deg (not modelled),
