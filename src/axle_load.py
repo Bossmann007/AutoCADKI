@@ -19,6 +19,7 @@ class AxleSpec:
     kingpin_from_front_mm: float = 800.0   # from the outer apex of the front head (assumed reference)
     kingpin_to_axle1_mm: float | None = 5640.0
     cg_from_kingpin_mm: float = 5640.0     # used only when kingpin_to_axle1_mm is None
+    chassis_rear_overhang_mm: float = 1500.0  # last axle to the rear end of the chassis (photo / study)
 
     @property
     def total_kg(self) -> float:

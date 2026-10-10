@@ -40,16 +40,25 @@ Research in `docs/research/`. `src/tank_shell.py`: parametric tank shell (oval s
 | 2026-10-10 | Shell thickness is an input, not computed from Anexo H | Tables depend on cargo group, density, l/cm, L; engineer reviews at the end |
 | 2026-10-10 | Deliverable format includes DWG (not only DXF) | User requirement; see docs/research/ai-cad-trailers.md §5 |
 
-## Project inputs (TEST project, replicated from the owner's hand sketch, 54,000 L; not absolute truths)
+## Project inputs (TEST project; numbers come from the owner's documents, not absolute truths)
 
-- Tank: circular, Di 2290 mm, straight length 12,888 mm = (54,000 x 1.025 - 2 x 1,200 + 3 x 41) / 4.118 (sketch formula: 2.5% factor, two heads of 1,200 L, three baffles of 41 L, 4.118 L/mm... per m of section), shell 3 mm, heads 4 mm (from earlier owner input; not in the sketch),
-  torispherical heads, ASSUMED R = Di, r = 0.10 Di (our head = 1,188 L vs the sketch's 1,200 L, which supports this), 3 baffles (positions TBD, at the suspension supports).
-- Trailer: 4 axles, spacings 2450 / 1250 / 1250 mm; kingpin 800 mm from the front end; kingpin -> axle 1 = 5640 mm;
-  loads: kingpin 13.5 t, axles 31.2 t, total 44.7 t (sketch). Per-axle split ASSUMED: axle 1 = 10 t, axles 2-4 equal.
-  The sketch also shows CG at 5640 and kingpin -> axle group 8080 (alt. 7830) from the kingpin; the model gives 5691 and 8154 (within ~1%).
-- Sketch items not modelled / unclear: overall ~18,300 mm (with tractor), 2500 (last axle to chassis end), 786/780, 5450, 12,640 and 248.
-- An earlier Pastre 45,000 L study (10/2015) was supplied only as a basis; its numbers are not used.
-- The engineer replaces all of this when a real project starts.
+Two presets in `src/presets.py` (default `52k`); the engineer replaces everything when a real project starts.
+
+- **52k** (colour photo + `TANQUE_PASTRE_52M3_asm.stp`, owner's first spoken spec): 52,000 L, shell 3 mm INOX, heads 4 mm,
+  Di 2290, straight 12,400 (our capacity formula gives 52.03 m3), kingpin 700 mm from the front, kingpin -> axle 1 = 5250,
+  axle spacings 2450 / 1250 / 1250, chassis 1500 past the last axle. (The owner once dictated Di 2190: the photo and STEP say 2290.)
+- **54k** (hand sketch, 54,000 L): straight 12,888 = (54,000 x 1.025 - 2 x 1,200 + 3 x 41) / 4.118, kingpin 800 from the front,
+  kingpin -> axle 1 = 5640, loads kingpin 13.5 t / axles 31.2 t / total 44.7 t.
+- Torispherical "ASME 10" heads ASSUMED R = Di, r = 0.10 Di (our head = 1,188 L vs the sketch's 1,200 L).
+- Loads per axle are NOT in the 52k documents: sketch loads reused, axle 1 = 10 t, axles 2-4 equal (ASSUMED).
+- Baffles (3): positions ASSUMED at axle 1, axles 2-3 mid, axle 4 (owner: "per the suspension"); outer stiffening rings (9) evenly spaced (ASSUMED).
+- Taken from the 52 m3 STEP assembly (Creo, 282 MB, 464 products, 5,922 solids; not in the repo): tyre OD 1105 x 275, dual gap 60,
+  track 1940, chassis rails 80 x 320 at 970 centres, tank bottom ~1,353-1,399 mm above ground, tank axis slopes ~0.4 deg (not modelled),
+  tank built from 1,215 mm rings of 3 mm wall, two spare wheels, first axle looks like a lift axle (not modelled).
+- Sketch items not modelled / unclear: overall ~18,300 mm (with tractor), 2500, 786/780, 5450, 12,640 and 248.
+- An earlier Pastre 45,000 L study (10/2015) was a basis only; its numbers are not used.
+- Outputs: `src/trailer_3d.py` (3D assembly -> STEP, 3D DXF with 3DFACE), `src/ga_drawing.py` (A1 1:50 general arrangement DXF).
+  DXF -> DWG was done with AutoCAD 2027 for Mac from the command line (script via `-b`), worked 3 of 4 times.
 
 ## Known issues
 
