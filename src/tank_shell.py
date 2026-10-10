@@ -155,8 +155,28 @@ def export_step(spec: ShellSpec, path: str) -> None:
     cq.exporters.export(cq.Workplane("XY").add(comp), path)
 
 
+def export_dxf_mesh(spec: ShellSpec, path: str, tolerance: float = 0.5) -> None:
+    """3D DXF with one MESH per part (layers CASCO, CALOTA_DIANTEIRA, CALOTA_TRASEIRA).
+
+    Workaround: AutoCAD for Mac does not import STEP. Meshes are triangulated, not B-rep solids.
+    """
+    import ezdxf
+
+    doc = ezdxf.new("R2018")
+    msp = doc.modelspace()
+    for name, wp in build_parts(spec).items():
+        doc.layers.add(name.upper())
+        verts, tris = wp.val().tessellate(tolerance, 0.1)
+        mesh = msp.add_mesh(dxfattribs={"layer": name.upper()})
+        with mesh.edit_data() as data:
+            data.vertices = [(v.x, v.y, v.z) for v in verts]
+            data.faces = [tuple(t) for t in tris]
+    doc.saveas(path)
+
+
 if __name__ == "__main__":
     s = ShellSpec()
     export_step(s, "out/tank_shell.step")
+    export_dxf_mesh(s, "out/tank_shell_3d.dxf")
     print(f"capacidade {capacidade_litros(s):.0f} L, {litros_por_cm(s):.2f} L/cm, "
           f"calota interna {s.head_depth_inner:.1f} mm, comprimento total {s.overall_length:.1f} mm")
