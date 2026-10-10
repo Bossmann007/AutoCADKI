@@ -170,22 +170,22 @@ def export_step(spec: ShellSpec, path: str) -> None:
     cq.exporters.export(cq.Workplane("XY").add(comp), path)
 
 
-def export_dxf_mesh(spec: ShellSpec, path: str, tolerance: float = 0.5) -> None:
-    """3D DXF with one MESH per part (layers CASCO, CALOTA_DIANTEIRA, CALOTA_TRASEIRA).
+def export_dxf_mesh(spec: ShellSpec, path: str, tolerance: float = 1.0) -> None:
+    """3D DXF (R2000) with 3DFACE triangles per part (layers CASCO, CALOTA_DIANTEIRA, CALOTA_TRASEIRA).
 
-    Workaround: AutoCAD for Mac does not import STEP. Meshes are triangulated, not B-rep solids.
+    Workaround: AutoCAD for Mac does not import STEP. 3DFACE is the most widely supported 3D entity
+    (R12 and later). Faces are triangles, not B-rep solids.
     """
     import ezdxf
 
-    doc = ezdxf.new("R2018")
+    doc = ezdxf.new("R2000")
     msp = doc.modelspace()
     for name, wp in build_parts(spec).items():
         doc.layers.add(name.upper())
         verts, tris = wp.val().tessellate(tolerance, 0.1)
-        mesh = msp.add_mesh(dxfattribs={"layer": name.upper()})
-        with mesh.edit_data() as data:
-            data.vertices = [(v.x, v.y, v.z) for v in verts]
-            data.faces = [tuple(t) for t in tris]
+        for i, j, k in tris:
+            msp.add_3dface([verts[i].toTuple(), verts[j].toTuple(), verts[k].toTuple(), verts[k].toTuple()],
+                           dxfattribs={"layer": name.upper()})
     doc.saveas(path)
 
 
