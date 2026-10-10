@@ -36,6 +36,8 @@ TBD after research. Findings go in `docs/research/`.
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-10-10 | Research before building | User request at setup |
+| 2026-10-10 | MVP target: tank trailer (carreta tanque) | User choice |
+| 2026-10-10 | Deliverable format includes DWG (not only DXF) | User requirement; see docs/research/ai-cad-trailers.md §5 |
 
 ## Known issues
 
