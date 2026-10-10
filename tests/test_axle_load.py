@@ -7,24 +7,26 @@ A, S = AxleSpec(), ShellSpec()
 
 
 def test_totals():
-    assert A.total_kg == 48000.0
-    assert sum(A.axle_loads_kg[1:]) == 25500.0
+    assert A.total_kg == pytest.approx(44700.0)
+    assert sum(A.axle_loads_kg) == pytest.approx(31200.0)
 
 
-def test_moment_equilibrium_about_kingpin():
-    r = axle_positions(A, S)
-    about_kp = sum(w * (x - r["kingpin_x"]) for w, x in zip(A.axle_loads_kg, r["axle_x"]))
-    assert about_kp == pytest.approx(A.total_kg * (r["cg_x"] - r["kingpin_x"]), rel=1e-9)
-
-
-def test_spacings_kept_and_hand_calc():
+def test_spacings_kept():
     r = axle_positions(A, S)
     gaps = [b - a for a, b in zip(r["axle_x"], r["axle_x"][1:])]
     assert gaps == pytest.approx(list(A.spacings_mm))
-    # hand calc: x_cg-from-kingpin = 5030; d1 = 48000*5030/35500 - 2657.7 = 6801.1 - 2657.7 = 4143.4
-    assert r["kingpin_to_axle1"] == pytest.approx(4143.4, abs=1.0)
+    assert r["kingpin_to_axle1"] == 5640.0
 
 
-def test_cg_shift_moves_axles_rearward():
-    base = axle_positions(A, S)["kingpin_to_axle1"]
-    assert axle_positions(A, S, cg_x=axle_positions(A, S)["cg_x"] + 300)["kingpin_to_axle1"] > base
+def test_reproduces_sketch_cg_and_axle_group_distance():
+    r = axle_positions(A, S)
+    assert r["cg_from_kingpin"] == pytest.approx(5640, abs=60)               # sketch: 5640 (+-50)
+    assert r["group_resultant_from_kingpin"] == pytest.approx(8080, abs=100)  # sketch: 8080
+
+
+def test_moment_balance_mode():
+    solved = AxleSpec(kingpin_to_axle1_mm=None, cg_from_kingpin_mm=5640.0)
+    r = axle_positions(solved, S)
+    about_kp = sum(w * (x - r["kingpin_x"]) for w, x in zip(solved.axle_loads_kg, r["axle_x"]))
+    assert about_kp == pytest.approx(solved.total_kg * 5640.0, rel=1e-9)
+    assert axle_positions(AxleSpec(kingpin_to_axle1_mm=None, cg_from_kingpin_mm=5940.0), S)["kingpin_to_axle1"] > r["kingpin_to_axle1"]

@@ -15,12 +15,15 @@ MAX_WIDTH_MM = 2600  # CONTRAN Res. 882/2021 art. 4 (verified in docs/research/a
 
 @dataclass(frozen=True)
 class ShellSpec:
-    inner_diameter: float = 2190.0
-    straight_length: float = 12400.0   # between head tangent lines
+    inner_diameter: float = 2290.0
+    straight_length: float = 12888.0   # between head tangent lines (hand sketch: see straight_length_for_capacity)
     shell_thickness: float = 3.0
     head_thickness: float = 4.0
     crown_factor: float = 1.0          # crown radius / Di
     knuckle_factor: float = 0.10       # knuckle radius / Di
+    baffle_count: int = 3
+    baffle_volume_l: float = 41.0      # volume displaced by each baffle (hand sketch)
+    capacity_factor: float = 1.025     # geometric net volume / nominal capacity (hand sketch)
 
     def check(self) -> None:
         if min(self.inner_diameter, self.straight_length, self.shell_thickness,
@@ -99,6 +102,18 @@ def capacidade_litros(spec: ShellSpec, steps: int = 20000) -> float:
 
 def _arc(wp: cq.Workplane, c, rad, a1, a2) -> cq.Workplane:
     return wp.threePointArc(_pt(c, rad, (a1 + a2) / 2), _pt(c, rad, a2))
+
+
+def capacidade_nominal_litros(spec: ShellSpec) -> float:
+    """Nominal capacity as in the hand sketch: (geometric - baffle displacement) / 1.025."""
+    return (capacidade_litros(spec) - spec.baffle_count * spec.baffle_volume_l) / spec.capacity_factor
+
+
+def straight_length_for_capacity(nominal_l: float, di: float, head_l: float = 1200.0, baffles: int = 3,
+                                 baffle_l: float = 41.0, factor: float = 1.025) -> float:
+    """Hand-sketch formula: L = (C*1.025 - 2*head + n*baffle) / (litros por metro of the section), in mm."""
+    area_l_per_m = pi * (di / 2) ** 2 / 1e6
+    return (nominal_l * factor - 2 * head_l + baffles * baffle_l) / area_l_per_m
 
 
 def _head_shell_profile(spec: ShellSpec) -> cq.Workplane:

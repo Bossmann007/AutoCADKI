@@ -6,7 +6,7 @@ Placeholder drawing for engineer review: no ABNT title block, no weld symbols, b
 import ezdxf
 
 from src.axle_load import AxleSpec, axle_positions
-from src.tank_shell import ShellSpec, capacidade_litros, head_geometry, litros_por_cm
+from src.tank_shell import ShellSpec, capacidade_litros, capacidade_nominal_litros, head_geometry, litros_por_cm
 
 DIMSTYLE = "TANK"
 
@@ -101,10 +101,10 @@ def build_drawing(spec: ShellSpec, axles: AxleSpec | None = None) -> ezdxf.docum
         "TANQUE - PLACEHOLDER, REVISAO DE ENGENHARIA PENDENTE",
         f"Costado {spec.shell_thickness:g} mm, calotas {spec.head_thickness:g} mm (entradas, nao calculadas)",
         f"Calotas toriesfericas 'ASME 10' (ASSUMIDO: R={spec.crown_factor:g}xDi, r={spec.knuckle_factor:g}xDi)",
-        f"Capacidade interna {capacidade_litros(spec):,.0f} L ({litros_por_cm(spec):.1f} L/cm)",
+        f"Capacidade nominal {capacidade_nominal_litros(spec):,.0f} L (geometrica {capacidade_litros(spec):,.0f} L, {litros_por_cm(spec):.1f} L/cm, 3 quebra-ondas x {spec.baffle_volume_l:g} L, fator {spec.capacity_factor:g})",
         f"Pino rei a {axles.kingpin_from_front_mm:g} mm da calota dianteira; cargas: pino {axles.kingpin_load_kg:g} kg, "
         f"eixos {', '.join(f'{w:g}' for w in axles.axle_loads_kg)} kg",
-        f"Posicao dos eixos: equilibrio de momentos, CG a {axles.cg_from_kingpin_mm:g} mm do pino rei (ASSUMIDO, base: estudo de referencia)",
+        f"Pino rei -> eixo 1: {pos['kingpin_to_axle1']:g} mm (croqui). CG resultante {pos['cg_from_kingpin']:.0f} mm do pino rei (croqui: 5640). Distribuicao por eixo ASSUMIDA.",
         "Quebra-ondas: 3, posicoes a definir. Unidades: mm. Escala 1:1 no modelo.",
     )
     for i, line in enumerate(notes):

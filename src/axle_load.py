@@ -1,10 +1,10 @@
-"""Axle positions from load balance (static, moments about the kingpin / pino rei).
+"""Kingpin (pino rei) and axle positions, with a static moment check. kg, mm.
 
-Inputs from the project owner (2026-10-10): 4 axles, spacings 2450 / 1250 / 1250 mm,
-axle 1 carries 10,000 kg, axles 2-4 carry 25,500 kg together (assumed equal share, 8,500 kg each),
-kingpin carries 12,500 kg. ASSUMPTION: combined centre of gravity 5,030 mm from the kingpin, the value in a
-reference study (Pastre 45,000 L, 4E chassis, 10/2015) used only as a basis; the real CG must come from the
-engineer. kg, mm.
+Test inputs replicated from the owner's hand sketch (54,000 L, 2026-05-21?): 4 axles, spacings 2450/1250/1250,
+kingpin 800 from the front, kingpin->axle 1 = 5640, loads: kingpin 13.5 t, axles 31.2 t, total 44.7 t.
+Per-axle split is NOT in the sketch: ASSUMED axle 1 = 10.0 t, axles 2-4 equal (7.067 t), which reproduces the
+sketch's kingpin->axle-group distance (8080) within ~1%. If kingpin_to_axle1_mm is None, axle 1 is solved from the
+CG distance instead (moment balance). The real values come from the engineer.
 """
 from dataclasses import dataclass
 
@@ -13,11 +13,12 @@ from src.tank_shell import ShellSpec
 
 @dataclass(frozen=True)
 class AxleSpec:
-    axle_loads_kg: tuple = (10000.0, 8500.0, 8500.0, 8500.0)
+    axle_loads_kg: tuple = (10000.0, 7066.67, 7066.67, 7066.66)
     spacings_mm: tuple = (2450.0, 1250.0, 1250.0)
-    kingpin_load_kg: float = 12500.0
-    kingpin_from_front_mm: float = 750.0   # from the outer apex of the front head (assumed reference)
-    cg_from_kingpin_mm: float = 5030.0     # reference-study CG, to be replaced by the engineer's value
+    kingpin_load_kg: float = 13500.0
+    kingpin_from_front_mm: float = 800.0   # from the outer apex of the front head (assumed reference)
+    kingpin_to_axle1_mm: float | None = 5640.0
+    cg_from_kingpin_mm: float = 5640.0     # used only when kingpin_to_axle1_mm is None
 
     @property
     def total_kg(self) -> float:
@@ -35,6 +36,14 @@ def axle_positions(axles: AxleSpec, shell: ShellSpec, cg_x: float | None = None)
     for sp in axles.spacings_mm:
         offsets.append(offsets[-1] + sp)
     group = sum(axles.axle_loads_kg)
+    if axles.kingpin_to_axle1_mm is not None:
+        xs = [kp_x + axles.kingpin_to_axle1_mm + o for o in offsets]
+        implied_cg = sum(w * (x - kp_x) for w, x in zip(axles.axle_loads_kg, xs)) / axles.total_kg
+        rear_apex = shell.straight_length + shell.head_depth_outer
+        return {"kingpin_x": kp_x, "axle_x": xs, "kingpin_to_axle1": axles.kingpin_to_axle1_mm,
+                "rear_overhang": rear_apex - xs[-1], "cg_x": kp_x + implied_cg,
+                "cg_from_kingpin": implied_cg,
+                "group_resultant_from_kingpin": sum(w * (x - kp_x) for w, x in zip(axles.axle_loads_kg, xs)) / group}
     xbar = sum(w * o for w, o in zip(axles.axle_loads_kg, offsets)) / group  # resultant, from axle 1
     # moments about the kingpin: total weight at cg == axle reactions (kingpin reaction has no moment)
     resultant_from_kp = axles.total_kg * (cg - kp_x) / group
@@ -42,4 +51,4 @@ def axle_positions(axles: AxleSpec, shell: ShellSpec, cg_x: float | None = None)
     xs = [kp_x + d1 + o for o in offsets]
     rear_apex = shell.straight_length + shell.head_depth_outer
     return {"kingpin_x": kp_x, "axle_x": xs, "kingpin_to_axle1": d1, "rear_overhang": rear_apex - xs[-1],
-            "cg_x": cg}
+            "cg_x": cg, "cg_from_kingpin": cg - kp_x, "group_resultant_from_kingpin": resultant_from_kp}
