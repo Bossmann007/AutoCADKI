@@ -11,21 +11,21 @@ what is feasible, and what output formats a trailer shop needs.
 
 ## Stack
 
-- Language: TBD (decided after research)
-- Framework: TBD
-- Package manager: TBD
+- Language: Python 3.12
+- Framework: CadQuery 2.x (OCCT B-rep), pytest
+- Package manager: uv (`.venv/`, git-ignored)
 
 ## Commands
 
 ```bash
-# install
-# test
-# run
+uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python cadquery pytest
+.venv/bin/python -m pytest -q
+mkdir -p out && .venv/bin/python -m src.tank_shell   # writes out/tank_shell.step
 ```
 
 ## Architecture
 
-TBD after research. Findings go in `docs/research/`.
+Research in `docs/research/`. `src/tank_shell.py`: parametric tank shell (oval section + half-ellipsoid heads, thickness as input). Next: nozzles/manholes, baffles, chassis, DXF drawings. All dimensions are placeholders until the reviewing engineer sets them.
 
 ## Conventions
 
@@ -37,6 +37,7 @@ TBD after research. Findings go in `docs/research/`.
 |------|----------|-----------|
 | 2026-10-10 | Research before building | User request at setup |
 | 2026-10-10 | MVP target: tank trailer (carreta tanque) | User choice |
+| 2026-10-10 | Shell thickness is an input, not computed from Anexo H | Tables depend on cargo group, density, l/cm, L; engineer reviews at the end |
 | 2026-10-10 | Deliverable format includes DWG (not only DXF) | User requirement; see docs/research/ai-cad-trailers.md §5 |
 
 ## Known issues
