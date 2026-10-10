@@ -20,7 +20,7 @@ def test_all_solids_valid(groups):
 
 
 def test_counts(groups):
-    assert len(groups["TANQUE"]) == 3
+    assert len(groups["TANQUE"]) == 11 + 2          # 54k: 10 x 1200 + 888 plates + 2 heads
     assert len(groups["QUEBRA_ONDAS"]) == 3
     assert len(groups["ANEIS"]) == 9
     assert len(groups["PARALAMAS"]) == 8
@@ -36,6 +36,29 @@ def test_envelope_within_contran(groups):
     assert zmin == pytest.approx(0.0, abs=1e-6)       # tyres on the ground
     assert zmax <= 4400                                # CONTRAN 882 max height
     assert 2 * ymax <= 2600                            # CONTRAN 882 max width
+
+
+def test_52k_shell_plates_10x1200_plus_400():
+    from src.presets import get
+
+    shell, axles = get("52k")
+    assert shell.plate_lengths == (1200.0,) * 10 + (400.0,)
+    assert shell.plate_welds == tuple(1200.0 * i for i in range(1, 11))
+    g = build_trailer(shell, axles)
+    plates = g["TANQUE"][:-2]
+    assert [round(wp.val().BoundingBox().xlen) for wp in plates] == [1200] * 10 + [400]
+    assert round(plates[0].val().BoundingBox().xmin) == 0 and round(plates[-1].val().BoundingBox().xmax) == 12400
+
+
+def test_52k_baffles_and_rings_follow_photo_positions():
+    from src.presets import get
+
+    shell, axles = get("52k")
+    g = build_trailer(shell, axles)
+    bx = sorted(round(wp.val().Center().x) for wp in g["QUEBRA_ONDAS"])
+    assert bx == [2060, 4040, 5950]
+    assert sorted(round(wp.val().Center().x) for wp in g["ANEIS"]) == [round(x) for x in shell.ring_positions]
+    assert round(axle_positions(axles, shell)["axle_x"][0]) == 5950   # 3rd baffle sits on axle 1
 
 
 def test_landing_legs_2500_from_kingpin(groups):

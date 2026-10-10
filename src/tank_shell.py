@@ -24,6 +24,9 @@ class ShellSpec:
     baffle_count: int = 3
     baffle_volume_l: float = 41.0      # volume displaced by each baffle (hand sketch)
     capacity_factor: float = 1.025     # geometric net volume / nominal capacity (hand sketch)
+    baffle_positions: tuple = ()       # x from the front junction (mm); empty = default assumption (at the suspension)
+    ring_positions: tuple = ()         # outer rings/straps, same reference; empty = evenly spaced default
+    plate_length: float = 1200.0       # shell plates (chapas), counted from the front head weld; last one is the remainder
 
     def check(self) -> None:
         if min(self.inner_diameter, self.straight_length, self.shell_thickness,
@@ -33,6 +36,21 @@ class ShellSpec:
             raise ValueError("invalid torispherical head proportions")
         if self.outer_diameter > MAX_WIDTH_MM:
             raise ValueError(f"outer width {self.outer_diameter} mm exceeds CONTRAN limit {MAX_WIDTH_MM} mm")
+
+    @property
+    def plate_lengths(self) -> tuple:
+        """Shell plate lengths from the front head weld: full plates, then the remainder (12,400 -> 10 x 1,200 + 400)."""
+        n, rest = divmod(self.straight_length, self.plate_length)
+        return (self.plate_length,) * int(n) + ((rest,) if rest > 1e-6 else ())
+
+    @property
+    def plate_welds(self) -> tuple:
+        """x of the circumferential welds between plates (excludes the two head/shell junctions)."""
+        out, x = [], 0.0
+        for ln in self.plate_lengths[:-1]:
+            x += ln
+            out.append(x)
+        return tuple(out)
 
     @property
     def ri(self) -> float:
@@ -142,6 +160,16 @@ def build_parts(spec: ShellSpec) -> dict[str, cq.Workplane]:
     front = _revolve(_head_shell_profile(spec))
     rear = front.mirror("YZ").translate((L, 0, 0))
     return {"casco": casco, "calota_dianteira": front, "calota_traseira": rear}
+
+
+def build_plates(spec: ShellSpec) -> list:
+    """The cylindrical body as separate plates (rings), front to rear."""
+    spec.check()
+    out, x = [], 0.0
+    for ln in spec.plate_lengths:
+        out.append(cq.Workplane("YZ").circle(spec.ri + spec.shell_thickness).circle(spec.ri).extrude(ln).translate((x, 0, 0)))
+        x += ln
+    return out
 
 
 def cavity(spec: ShellSpec) -> cq.Workplane:

@@ -43,6 +43,21 @@ def test_last_axle_to_rear_junction_is_1500(doc):
     assert SHELL.straight_length - pos["axle_x"][-1] == 1500
 
 
+def test_baffle_lines_and_position_dimensions(doc):
+    xs = sorted(round(l.dxf.start.x - 5000) for l in doc.modelspace().query("LINE")
+                if l.dxf.layer == "QUEBRA_ONDAS")
+    assert xs == [2060, 4040, 5950]
+    vals = {round(e.get_measurement()) for e in doc.modelspace().query("DIMENSION")}
+    assert {2060, 1980, 1910} <= vals
+
+
+def test_weld_seams_and_plate_dimensions(doc):
+    xs = sorted(round(l.dxf.start.x - 5000) for l in doc.modelspace().query("LINE") if l.dxf.layer == "SOLDA")
+    assert xs == [1200 * i for i in range(1, 11)]
+    vals = [round(e.get_measurement()) for e in doc.modelspace().query("DIMENSION")]
+    assert vals.count(1200) >= 10 and 400 in vals
+
+
 def test_wheel_circles(doc):
     wheels = [c for c in doc.modelspace().query("CIRCLE") if c.dxf.layer == "RODAS" and abs(c.dxf.radius - 552.5) < 1e-6]
     assert len(wheels) == 4

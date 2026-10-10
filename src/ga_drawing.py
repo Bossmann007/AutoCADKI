@@ -21,9 +21,9 @@ TXT, TXT_BIG = 140, 210          # text heights (mm in model) = 2.8 / 4.2 mm on 
 DIM = "GA"
 
 LAYERS = (("OUTLINE", 7, "CONTINUOUS"), ("HIDDEN", 8, "DASHED"), ("CENTER", 1, "CENTER"), ("DIM", 3, "CONTINUOUS"),
-          ("TEXT", 7, "CONTINUOUS"), ("ANEIS", 30, "CONTINUOUS"), ("QUEBRA_ONDAS", 1, "DASHED"),
+          ("TEXT", 7, "CONTINUOUS"), ("ANEIS", 30, "CONTINUOUS"), ("QUEBRA_ONDAS", 1, "CONTINUOUS"),
           ("CHASSI", 94, "CONTINUOUS"), ("RODAS", 250, "CONTINUOUS"), ("SUSPENSAO", 8, "CONTINUOUS"),
-          ("PINO_REI", 1, "CONTINUOUS"), ("MOLDURA", 7, "CONTINUOUS"), ("TABELA", 7, "CONTINUOUS"), ("JUNCAO", 6, "CENTER"))
+          ("PINO_REI", 1, "CONTINUOUS"), ("MOLDURA", 7, "CONTINUOUS"), ("TABELA", 7, "CONTINUOUS"), ("JUNCAO", 6, "CENTER"), ("SOLDA", 2, "CONTINUOUS"))
 
 
 def _setup(doc):
@@ -103,17 +103,30 @@ def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), nam
     for (c, rad, a1, a2) in _all_arcs(shell, 0.0):
         s.arc((X(c[0]), Y(zc + c[1])), rad, a1, a2, "HIDDEN")
     s.line((X(-ho - 300), Y(zc)), (X(L + ho + 300), Y(zc)), "CENTER")
-    for i in range(gear.ring_count):                                     # outer rings
-        x = 600 + i * (L - 1200) / (gear.ring_count - 1)
+    ring_x = shell.ring_positions or tuple(600 + i * (L - 1200) / (gear.ring_count - 1) for i in range(gear.ring_count))
+    baffle_x = shell.baffle_positions or (axle_x[0], (axle_x[1] + axle_x[2]) / 2, axle_x[3])
+    for xw in shell.plate_welds:                                         # circumferential welds between plates
+        s.line((X(xw), Y(zc - ro)), (X(xw), Y(zc + ro)), "SOLDA")
+    pb = [0.0, *shell.plate_welds, L]
+    for p, q in zip(pb, pb[1:]):                                         # plate lengths
+        s.dim((X(p), Y(zc + ro)), (X(q), Y(zc + ro)), (0, Y(zc + ro) + 1400))
+    n_full = len(shell.plate_lengths) - (1 if shell.plate_lengths[-1] != shell.plate_length else 0)
+    s.text(f"CHAPAS DO CORPO: {n_full} x {shell.plate_length:g} + {shell.plate_lengths[-1]:g} (a partir da solda do tampo dianteiro) = {L:g}",
+           (X(0), Y(zc + ro) + 1900), TXT, "SOLDA")
+    for x in ring_x:                                                     # outer rings / straps (orange)
         s.rect(X(x - 30), Y(zc - ro - 6), X(x + 30), Y(zc + ro + 6), "ANEIS")
-    for x in (axle_x[0], (axle_x[1] + axle_x[2]) / 2, axle_x[3]):        # baffles (inside, dashed)
-        s.line((X(x), Y(zc - ri)), (X(x), Y(zc + ri)), "QUEBRA_ONDAS")
+    for i, x in enumerate(baffle_x, 1):                                  # baffles (red, thick)
+        s.msp.add_line((X(x), Y(zc - ri)), (X(x), Y(zc + ri)), dxfattribs={"layer": "QUEBRA_ONDAS", "lineweight": 70})
+        s.text(f"QO{i}", (X(x) + 50, Y(zc + ri) + 90), TXT, "QUEBRA_ONDAS")
+    bx = [0.0, *baffle_x]
+    for p, q in zip(bx, bx[1:]):                                         # baffle positions from the front junction
+        s.dim((X(p), Y(zc + ro)), (X(q), Y(zc + ro)), (0, Y(zc + ro) + 700))
     for xj, side in ((0, "DIANTEIRA"), (L, "TRASEIRA")):                 # cylinder/head junction, both ends
         s.line((X(xj), G - 600), (X(xj), Y(zc + ro + 350)), "JUNCAO")
         s.text(f"JUNCAO CORPO CILINDRICO / TAMPO {side}", (X(xj) + 90, Y(zc + ro + 380)), TXT, "JUNCAO", rotation=90)
     s.text(f"#{shell.shell_thickness:g} mm INOX", (X(L * 0.62), Y(zc + 500)), TXT_BIG)
     s.text(f"{round(capacidade_nominal_litros(shell), -2):.0f} L", (X(L * 0.45), Y(zc - 150)), TXT_BIG)
-    s.text("QUEBRA-ONDAS (3) - POSICOES A DEFINIR", (X(axle_x[0] - 1200), Y(zc + ri + 150)), TXT, "QUEBRA_ONDAS")
+    s.text("QUEBRA-ONDAS (QO): posicoes medidas na foto de referencia (+-100 mm); QO3 assumido no eixo 1", (X(0), Y(zc + ro) + 2300), TXT, "QUEBRA_ONDAS")
 
     # --- chassis, kingpin, landing legs, bumper
     s.rect(X(x_front), Y(rz0), X(x_rear), Y(gear.rail_top_z), "CHASSI")

@@ -10,7 +10,7 @@ from math import cos, radians
 import cadquery as cq
 
 from src.axle_load import AxleSpec, axle_positions
-from src.tank_shell import ShellSpec, build_parts
+from src.tank_shell import ShellSpec, build_parts, build_plates
 
 
 @dataclass(frozen=True)
@@ -51,15 +51,17 @@ def build_trailer(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec()
     g: dict[str, list] = {k: [] for k in ("TANQUE", "ANEIS", "QUEBRA_ONDAS", "CHASSI", "PINO_REI", "EIXOS",
                                           "SUSPENSAO", "RODAS", "PARALAMAS")}
 
-    g["TANQUE"] = [wp.translate((0, 0, zc)) for wp in build_parts(shell).values()]
+    parts = build_parts(shell)
+    g["TANQUE"] = [wp.translate((0, 0, zc)) for wp in (*build_plates(shell), parts["calota_dianteira"], parts["calota_traseira"])]
 
     ro = shell.ri + shell.shell_thickness
     L = shell.straight_length
-    for i in range(gear.ring_count):                                  # outer rings, evenly spaced (ASSUMED)
-        x = 600 + i * (L - 1200) / (gear.ring_count - 1)
+    ring_x = shell.ring_positions or tuple(600 + i * (L - 1200) / (gear.ring_count - 1) for i in range(gear.ring_count))
+    baffle_x = shell.baffle_positions or (axle_x[0], (axle_x[1] + axle_x[2]) / 2, axle_x[3])
+    for x in ring_x:                                                  # outer rings / straps
         g["ANEIS"].append(cq.Workplane("YZ").circle(ro + gear.ring_thickness).circle(ro).extrude(gear.ring_width)
                           .translate((x - gear.ring_width / 2, 0, zc)))
-    for x in (axle_x[0], (axle_x[1] + axle_x[2]) / 2, axle_x[3]):     # 3 baffles at the suspension (ASSUMED)
+    for x in baffle_x:                                                # baffles
         g["QUEBRA_ONDAS"].append(cq.Workplane("YZ").circle(shell.ri).circle(gear.baffle_hole / 2).extrude(3)
                                  .translate((x - 1.5, 0, zc)))
 
