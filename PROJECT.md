@@ -45,9 +45,9 @@ Research in `docs/research/`. `src/tank_shell.py`: parametric tank shell (oval s
 Two presets in `src/presets.py` (default `52k`); the engineer replaces everything when a real project starts.
 
 - **52k** (colour photo + `TANQUE_PASTRE_52M3_asm.stp`, owner's first spoken spec): 52,000 L, shell 3 mm INOX, heads 4 mm,
-  Di 2290, straight 12,400 (our capacity formula gives 52.03 m3), kingpin 700 mm from the front, kingpin -> axle 1 = 5250,
-  axle spacings 2450 / 1250 / 1250, chassis 1500 past the last axle. (The owner once dictated Di 2190: the photo and STEP say 2290.)
-- **54k** (hand sketch, 54,000 L): straight 12,888 = (54,000 x 1.025 - 2 x 1,200 + 3 x 41) / 4.118, kingpin 800 from the front,
+  Di 2290, straight 12,400 (our capacity formula gives 52.03 m3), kingpin 700 mm from the cylinder/head junction (owner confirmed 2026-10-10; not from the apex), kingpin -> axle 1 = 5250,
+  axle spacings 2450 / 1250 / 1250, chassis ends at the rear junction: 1500 from the last axle to it (700 + 5250 + 2450 + 1250 + 1250 + 1500 = 12,400). (The owner once dictated Di 2190: the photo and STEP say 2290.)
+- **54k** (hand sketch, 54,000 L): straight 12,888 = (54,000 x 1.025 - 2 x 1,200 + 3 x 41) / 4.118, kingpin 800 from the front junction (same convention ASSUMED),
   kingpin -> axle 1 = 5640, loads kingpin 13.5 t / axles 31.2 t / total 44.7 t.
 - Torispherical "ASME 10" heads ASSUMED R = Di, r = 0.10 Di (our head = 1,188 L vs the sketch's 1,200 L).
 - Loads per axle are NOT in the 52k documents: sketch loads reused, axle 1 = 10 t, axles 2-4 equal (ASSUMED).

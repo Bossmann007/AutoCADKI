@@ -23,7 +23,7 @@ DIM = "GA"
 LAYERS = (("OUTLINE", 7, "CONTINUOUS"), ("HIDDEN", 8, "DASHED"), ("CENTER", 1, "CENTER"), ("DIM", 3, "CONTINUOUS"),
           ("TEXT", 7, "CONTINUOUS"), ("ANEIS", 30, "CONTINUOUS"), ("QUEBRA_ONDAS", 1, "DASHED"),
           ("CHASSI", 94, "CONTINUOUS"), ("RODAS", 250, "CONTINUOUS"), ("SUSPENSAO", 8, "CONTINUOUS"),
-          ("PINO_REI", 1, "CONTINUOUS"), ("MOLDURA", 7, "CONTINUOUS"), ("TABELA", 7, "CONTINUOUS"))
+          ("PINO_REI", 1, "CONTINUOUS"), ("MOLDURA", 7, "CONTINUOUS"), ("TABELA", 7, "CONTINUOUS"), ("JUNCAO", 6, "CENTER"))
 
 
 def _setup(doc):
@@ -108,6 +108,9 @@ def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), nam
         s.rect(X(x - 30), Y(zc - ro - 6), X(x + 30), Y(zc + ro + 6), "ANEIS")
     for x in (axle_x[0], (axle_x[1] + axle_x[2]) / 2, axle_x[3]):        # baffles (inside, dashed)
         s.line((X(x), Y(zc - ri)), (X(x), Y(zc + ri)), "QUEBRA_ONDAS")
+    for xj, side in ((0, "DIANTEIRA"), (L, "TRASEIRA")):                 # cylinder/head junction, both ends
+        s.line((X(xj), G - 600), (X(xj), Y(zc + ro + 350)), "JUNCAO")
+        s.text(f"JUNCAO CORPO CILINDRICO / TAMPO {side}", (X(xj) + 90, Y(zc + ro + 380)), TXT, "JUNCAO", rotation=90)
     s.text(f"#{shell.shell_thickness:g} mm INOX", (X(L * 0.62), Y(zc + 500)), TXT_BIG)
     s.text(f"{round(capacidade_nominal_litros(shell), -2):.0f} L", (X(L * 0.45), Y(zc - 150)), TXT_BIG)
     s.text("QUEBRA-ONDAS (3) - POSICOES A DEFINIR", (X(axle_x[0] - 1200), Y(zc + ri + 150)), TXT, "QUEBRA_ONDAS")
@@ -137,7 +140,7 @@ def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), nam
 
     # --- dimensions (side view)
     dy1, dy2, dy3 = G - 900, G - 1500, G - 2100
-    xs = [-ho, kp] + axle_x + [x_rear]
+    xs = [0, kp] + axle_x + [L]           # chain from the front junction to the rear junction
     for p, q in zip(xs, xs[1:]):
         s.dim((X(p), G), (X(q), G), (0, dy1))
     s.dim((X(-ho), G), (X(0), G), (0, dy2))

@@ -20,12 +20,9 @@ def doc(tmp_path_factory):
 def test_expected_dimensions_present(doc):
     pos = axle_positions(AXLES, SHELL)
     vals = {round(e.get_measurement()) for e in doc.modelspace().query("DIMENSION")}
-    for v in (700 - 0, 5250, 2450, 1250, 1500, 12400, 2290, SHELL.head_depth_outer, SHELL.overall_length):
-        if v == 700:
-            continue  # 700 is the distance from the front apex to the kingpin: asserted below
+    for v in (700, 5250, 2450, 1250, 1500, 12400, 2290, SHELL.head_depth_outer, SHELL.overall_length):
         assert round(v) in vals, v
-    assert round(pos["kingpin_x"] + SHELL.head_depth_outer) == 700
-    assert 700 in vals
+    assert pos["kingpin_x"] == 700  # junction -> kingpin
 
 
 def test_layers_and_tables(doc):
@@ -34,6 +31,16 @@ def test_layers_and_tables(doc):
     texts = " ".join(t.dxf.text for t in doc.modelspace().query("TEXT"))
     for needle in ("DIN 7168", "REACAO NO SOLO", "INOX", "QUEBRA-ONDAS"):
         assert needle in texts
+
+
+def test_junction_lines_on_both_sides(doc):
+    xs = sorted(round(l.dxf.start.x) for l in doc.modelspace().query("LINE") if l.dxf.layer == "JUNCAO")
+    assert xs == [5000, 5000 + 12400]   # OX + 0 and OX + straight length
+
+
+def test_last_axle_to_rear_junction_is_1500(doc):
+    pos = axle_positions(AXLES, SHELL)
+    assert SHELL.straight_length - pos["axle_x"][-1] == 1500
 
 
 def test_wheel_circles(doc):

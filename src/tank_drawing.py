@@ -14,7 +14,7 @@ DIMSTYLE = "TANK"
 def _setup(doc):
     for name, color, lt in (("OUTLINE", 7, "CONTINUOUS"), ("HIDDEN", 8, "DASHED"),
                             ("CENTER", 1, "CENTER"), ("DIM", 3, "CONTINUOUS"), ("TEXT", 7, "CONTINUOUS"),
-                            ("SUSPENSION", 5, "CONTINUOUS")):
+                            ("SUSPENSION", 5, "CONTINUOUS"), ("JUNCAO", 6, "CENTER")):
         doc.layers.add(name, color=color, linetype=lt)
     doc.dimstyles.new(DIMSTYLE, dxfattribs={
         "dimtxt": 90, "dimasz": 70, "dimexe": 40, "dimexo": 30, "dimgap": 25,
@@ -67,6 +67,9 @@ def build_drawing(spec: ShellSpec, axles: AxleSpec | None = None) -> ezdxf.docum
     _add_arcs(msp, _all_arcs(spec, 0.0), "HIDDEN")
     msp.add_line((-ho - 250, 0), (L + ho + 250, 0), dxfattribs={"layer": "CENTER"})
 
+    for xj in (0, L):                                                    # cylinder/head junction, both ends
+        msp.add_line((xj, -b - 250), (xj, b + 250), dxfattribs={"layer": "JUNCAO"})
+
     # kingpin and axle centre lines
     kp = pos["kingpin_x"]
     msp.add_line((kp, -b - 150), (kp, b + 150), dxfattribs={"layer": "SUSPENSION"})
@@ -102,7 +105,7 @@ def build_drawing(spec: ShellSpec, axles: AxleSpec | None = None) -> ezdxf.docum
         f"Costado {spec.shell_thickness:g} mm, calotas {spec.head_thickness:g} mm (entradas, nao calculadas)",
         f"Calotas toriesfericas 'ASME 10' (ASSUMIDO: R={spec.crown_factor:g}xDi, r={spec.knuckle_factor:g}xDi)",
         f"Capacidade nominal {capacidade_nominal_litros(spec):,.0f} L (geometrica {capacidade_litros(spec):,.0f} L, {litros_por_cm(spec):.1f} L/cm, 3 quebra-ondas x {spec.baffle_volume_l:g} L, fator {spec.capacity_factor:g})",
-        f"Pino rei a {axles.kingpin_from_front_mm:g} mm da calota dianteira; cargas: pino {axles.kingpin_load_kg:g} kg, "
+        f"Pino rei a {axles.kingpin_from_tangent_mm:g} mm da juncao corpo/calota; cargas: pino {axles.kingpin_load_kg:g} kg, "
         f"eixos {', '.join(f'{w:g}' for w in axles.axle_loads_kg)} kg",
         f"Pino rei -> eixo 1: {pos['kingpin_to_axle1']:g} mm (croqui). CG resultante {pos['cg_from_kingpin']:.0f} mm do pino rei (croqui: 5640). Distribuicao por eixo ASSUMIDA.",
         "Quebra-ondas: 3, posicoes a definir. Unidades: mm. Escala 1:1 no modelo.",

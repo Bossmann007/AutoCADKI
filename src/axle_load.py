@@ -1,7 +1,7 @@
 """Kingpin (pino rei) and axle positions, with a static moment check. kg, mm.
 
 Test inputs replicated from the owner's hand sketch (54,000 L, 2026-05-21?): 4 axles, spacings 2450/1250/1250,
-kingpin 800 from the front, kingpin->axle 1 = 5640, loads: kingpin 13.5 t, axles 31.2 t, total 44.7 t.
+kingpin 800 from the front tangent line (junction of cylinder and head; same convention as the owner's 700), kingpin->axle 1 = 5640, loads: kingpin 13.5 t, axles 31.2 t, total 44.7 t.
 Per-axle split is NOT in the sketch: ASSUMED axle 1 = 10.0 t, axles 2-4 equal (7.067 t), which reproduces the
 sketch's kingpin->axle-group distance (8080) within ~1%. If kingpin_to_axle1_mm is None, axle 1 is solved from the
 CG distance instead (moment balance). The real values come from the engineer.
@@ -16,7 +16,7 @@ class AxleSpec:
     axle_loads_kg: tuple = (10000.0, 7066.67, 7066.67, 7066.66)
     spacings_mm: tuple = (2450.0, 1250.0, 1250.0)
     kingpin_load_kg: float = 13500.0
-    kingpin_from_front_mm: float = 800.0   # from the outer apex of the front head (assumed reference)
+    kingpin_from_tangent_mm: float = 800.0  # from the cylinder/head junction (front tangent line), per owner (700 case)
     kingpin_to_axle1_mm: float | None = 5640.0
     cg_from_kingpin_mm: float = 5640.0     # used only when kingpin_to_axle1_mm is None
     chassis_rear_overhang_mm: float = 1500.0  # last axle to the rear end of the chassis (photo / study)
@@ -31,7 +31,7 @@ def axle_positions(axles: AxleSpec, shell: ShellSpec, cg_x: float | None = None)
 
     cg_x: combined centre of gravity x; default = kingpin + axles.cg_from_kingpin_mm.
     """
-    kp_x = -shell.head_depth_outer + axles.kingpin_from_front_mm
+    kp_x = axles.kingpin_from_tangent_mm
     cg = kp_x + axles.cg_from_kingpin_mm if cg_x is None else cg_x
     offsets = [0.0]
     for sp in axles.spacings_mm:
