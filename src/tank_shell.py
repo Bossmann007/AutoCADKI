@@ -1,11 +1,12 @@
-"""Parametric tank shell (casco): oval cross-section cylinder + two half-ellipsoid heads (calotas).
+"""Parametric tank shell: circular cylinder (casco) + two torispherical heads (calotas), as 3 separate parts.
 
-Units: mm. Tank axis = X, width = Y, height = Z. Geometry only: thickness is an INPUT,
-it is not derived from Portaria INMETRO 134/2022 Anexo H (see docs/research/tank-trailer-norms-br.md).
-Every default below is a placeholder for the reviewing engineer, not a design.
+Units: mm. Tank axis = X, x=0 at the front tangent line, x increases to the rear.
+Thicknesses are INPUTS; they are not derived from Portaria INMETRO 134/2022 Anexo H.
+Head type "ASME 10" is ASSUMED to mean crown radius = 1.0 x Di, knuckle radius = 0.10 x Di
+(confirm with the engineer). Straight flange of the heads is not modelled.
 """
 from dataclasses import dataclass
-from math import pi
+from math import atan2, cos, pi, radians, sin, sqrt
 
 import cadquery as cq
 
@@ -14,74 +15,148 @@ MAX_WIDTH_MM = 2600  # CONTRAN Res. 882/2021 art. 4 (verified in docs/research/a
 
 @dataclass(frozen=True)
 class ShellSpec:
-    width: float = 2200.0        # outer width, Y
-    height: float = 1500.0       # outer height, Z
-    length: float = 9500.0       # cylindrical part, X
-    head_depth: float = 350.0    # outer depth of each head along X
-    thickness: float = 4.75      # wall, shell and heads
+    inner_diameter: float = 2190.0
+    straight_length: float = 12400.0   # between head tangent lines
+    shell_thickness: float = 3.0
+    head_thickness: float = 4.0
+    crown_factor: float = 1.0          # crown radius / Di
+    knuckle_factor: float = 0.10       # knuckle radius / Di
 
     def check(self) -> None:
-        if min(self.width, self.height, self.length, self.head_depth, self.thickness) <= 0:
+        if min(self.inner_diameter, self.straight_length, self.shell_thickness,
+               self.head_thickness, self.crown_factor, self.knuckle_factor) <= 0:
             raise ValueError("all dimensions must be > 0")
-        if self.thickness >= min(self.width, self.height, 2 * self.head_depth) / 2:
-            raise ValueError("thickness too large for the section")
-        if self.width > MAX_WIDTH_MM:
-            raise ValueError(f"outer width {self.width} mm exceeds CONTRAN limit {MAX_WIDTH_MM} mm")
+        if not 0 < self.knuckle_factor <= 0.5 or self.crown_factor < 0.5 + self.knuckle_factor / 2:
+            raise ValueError("invalid torispherical head proportions")
+        if self.outer_diameter > MAX_WIDTH_MM:
+            raise ValueError(f"outer width {self.outer_diameter} mm exceeds CONTRAN limit {MAX_WIDTH_MM} mm")
 
     @property
-    def inner(self) -> tuple[float, float, float]:
-        """Inner semi-axes (a: Y, b: Z, h: head depth)."""
-        t = self.thickness
-        return self.width / 2 - t, self.height / 2 - t, self.head_depth - t
+    def ri(self) -> float:
+        return self.inner_diameter / 2
+
+    @property
+    def outer_diameter(self) -> float:
+        return self.inner_diameter + 2 * max(self.shell_thickness, self.head_thickness)
+
+    @property
+    def crown_radius(self) -> float:
+        return self.crown_factor * self.inner_diameter
+
+    @property
+    def knuckle_radius(self) -> float:
+        return self.knuckle_factor * self.inner_diameter
+
+    @property
+    def head_depth_inner(self) -> float:
+        """Inner depth of one head (apex to tangent line), straight flange not included."""
+        R, r = self.crown_radius, self.knuckle_radius
+        return R - sqrt((R - r) ** 2 - (self.ri - r) ** 2)
+
+    @property
+    def head_depth_outer(self) -> float:
+        return self.head_depth_inner + self.head_thickness
+
+    @property
+    def overall_length(self) -> float:
+        return self.straight_length + 2 * self.head_depth_outer
+
+
+def head_geometry(spec: ShellSpec) -> dict:
+    """Centres and angles of the front (left) head, inner surface. Angles in degrees, CCW from +X."""
+    R, r, ri, h = spec.crown_radius, spec.knuckle_radius, spec.ri, spec.head_depth_inner
+    crown_c = (R - h, 0.0)                 # crown centre on the axis
+    knuckle_c = (0.0, ri - r)              # knuckle centre, on the tangent line
+    dx, dy = knuckle_c[0] - crown_c[0], knuckle_c[1] - crown_c[1]
+    n = sqrt(dx * dx + dy * dy)
+    u = (dx / n, dy / n)                   # unit vector crown centre -> knuckle centre
+    return {"crown_c": crown_c, "knuckle_c": knuckle_c, "u": u, "theta": atan2(u[1], u[0]) * 180 / pi}
+
+
+def _pt(c, rad, ang_deg):
+    return (c[0] + rad * cos(radians(ang_deg)), c[1] + rad * sin(radians(ang_deg)))
 
 
 def litros_por_cm(spec: ShellSpec) -> float:
-    """Volumetric capacity per cm of cylindrical length: key for Anexo H tables."""
-    a, b, _ = spec.inner
-    return pi * a * b / 1e6  # mm^2 * 10 mm / 1e6 mm^3 per litre
+    """Inner volumetric capacity per cm of straight length (key input of Anexo H thickness tables)."""
+    return pi * spec.ri ** 2 * 10 / 1e6  # mm^2 * 10 mm (1 cm) / 1e6 mm^3 per litre
 
 
-def capacidade_litros(spec: ShellSpec) -> float:
-    a, b, h = spec.inner
-    cyl = pi * a * b * spec.length
-    heads = 4 / 3 * pi * a * b * h  # two half-ellipsoids
-    return (cyl + heads) / 1e6
+def capacidade_litros(spec: ShellSpec, steps: int = 20000) -> float:
+    """Inner capacity: cylinder + 2 heads, heads integrated numerically over the analytic profile."""
+    R, r, ri, h = spec.crown_radius, spec.knuckle_radius, spec.ri, spec.head_depth_inner
+    g = head_geometry(spec)
+    cx = g["crown_c"][0]
+    x_t = g["knuckle_c"][0] + r * g["u"][0]      # crown/knuckle tangent point, x
+    dx = h / steps
+    vol = 0.0
+    for i in range(steps):
+        x = -h + (i + 0.5) * dx
+        y = sqrt(R * R - (x - cx) ** 2) if x < x_t else g["knuckle_c"][1] + sqrt(r * r - x * x)
+        vol += pi * y * y * dx
+    return (pi * ri ** 2 * spec.straight_length + 2 * vol) / 1e6
 
 
-def _body(a: float, b: float, h: float, length: float) -> cq.Workplane:
-    """Solid of revolution (circular section radius a, half-ellipsoid heads), then scaled in Z by b/a.
+def _arc(wp: cq.Workplane, c, rad, a1, a2) -> cq.Workplane:
+    return wp.threePointArc(_pt(c, rad, (a1 + a2) / 2), _pt(c, rad, a2))
 
-    One revolve + one scale avoids boolean seams between head and cylinder (those gave invalid solids).
-    """
-    V = cq.Vector
-    head_l = cq.Edge.makeEllipse(a, h, V(0, 0, 0), V(0, 0, 1), V(0, 1, 0), 0, 90)
-    top = cq.Edge.makeLine(V(0, a, 0), V(length, a, 0))
-    head_r = cq.Edge.makeEllipse(a, h, V(length, 0, 0), V(0, 0, 1), V(0, 1, 0), 270, 360)
-    axis = cq.Edge.makeLine(V(-h, 0, 0), V(length + h, 0, 0))
-    face = cq.Face.makeFromWires(cq.Wire.assembleEdges([head_l, top, head_r, axis]))
-    solid = cq.Solid.revolve(face, 360, V(0, 0, 0), V(1, 0, 0))
-    return cq.Workplane("XY").add(solid.transformGeometry(cq.Matrix([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, b / a, 0]])))
+
+def _head_shell_profile(spec: ShellSpec) -> cq.Workplane:
+    """Front head as a thin shell, profile in (x, radius): outer apex -> tangent line -> inner apex."""
+    g, t = head_geometry(spec), spec.head_thickness
+    C, K, th = g["crown_c"], g["knuckle_c"], g["theta"]
+    R, r, ri, h = spec.crown_radius, spec.knuckle_radius, spec.ri, spec.head_depth_inner
+    wp = cq.Workplane("XY").moveTo(-h - t, 0)
+    wp = _arc(wp, C, R + t, 180, th)
+    wp = _arc(wp, K, r + t, th, 90)
+    wp = wp.lineTo(0, ri)
+    wp = _arc(wp, K, r, 90, th)
+    wp = _arc(wp, C, R, th, 180)
+    return wp.close()
+
+
+def _revolve(wp: cq.Workplane) -> cq.Workplane:
+    return wp.revolve(360, (0, 0, 0), (1, 0, 0))
+
+
+def build_parts(spec: ShellSpec) -> dict[str, cq.Workplane]:
+    """Three parts: casco (cylinder ring), calota_dianteira, calota_traseira."""
+    spec.check()
+    L = spec.straight_length
+    casco = cq.Workplane("YZ").circle(spec.ri + spec.shell_thickness).circle(spec.ri).extrude(L)
+    front = _revolve(_head_shell_profile(spec))
+    rear = front.mirror("YZ").translate((L, 0, 0))
+    return {"casco": casco, "calota_dianteira": front, "calota_traseira": rear}
 
 
 def cavity(spec: ShellSpec) -> cq.Workplane:
+    """Inner volume (fluid) as one solid, from the inner surfaces only."""
     spec.check()
-    a, b, h = spec.inner
-    return _body(a, b, h, spec.length)
-
-
-def build_shell(spec: ShellSpec) -> cq.Workplane:
-    spec.check()
-    outer = _body(spec.width / 2, spec.height / 2, spec.head_depth, spec.length)
-    return outer.cut(cavity(spec))
+    g, R, r, ri, h, L = head_geometry(spec), spec.crown_radius, spec.knuckle_radius, spec.ri, spec.head_depth_inner, spec.straight_length
+    C, K, th = g["crown_c"], g["knuckle_c"], g["theta"]
+    mir = lambda p: (L - p[0], p[1])  # noqa: E731
+    wp = cq.Workplane("XY").moveTo(-h, 0)
+    wp = _arc(wp, C, R, 180, th)
+    wp = _arc(wp, K, r, th, 90)
+    wp = wp.lineTo(L, ri)
+    wp = wp.threePointArc(mir(_pt(K, r, (th + 90) / 2)), mir(_pt(K, r, th)))
+    wp = wp.threePointArc(mir(_pt(C, R, (180 + th) / 2)), (L + h, 0))
+    return _revolve(wp.close())
 
 
 def mesh_volume_litros(wp: cq.Workplane) -> float:
-    """Volume from a tessellation. Shape.Volume() is ~1% off after the non-uniform scale in _body."""
     verts, tris = wp.val().tessellate(0.01, 0.05)
     return abs(sum(verts[i].dot(verts[j].cross(verts[k])) for i, j, k in tris)) / 6 / 1e6
 
 
+def export_step(spec: ShellSpec, path: str) -> None:
+    parts = build_parts(spec)
+    comp = cq.Compound.makeCompound([p.val() for p in parts.values()])
+    cq.exporters.export(cq.Workplane("XY").add(comp), path)
+
+
 if __name__ == "__main__":
     s = ShellSpec()
-    cq.exporters.export(build_shell(s), "out/tank_shell.step")
-    print(f"capacidade {capacidade_litros(s):.0f} L, {litros_por_cm(s):.2f} L/cm")
+    export_step(s, "out/tank_shell.step")
+    print(f"capacidade {capacidade_litros(s):.0f} L, {litros_por_cm(s):.2f} L/cm, "
+          f"calota interna {s.head_depth_inner:.1f} mm, comprimento total {s.overall_length:.1f} mm")
