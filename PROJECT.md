@@ -46,7 +46,7 @@ Research in `docs/research/`. `src/tank_shell.py`: parametric tank shell (oval s
   torispherical "ASME 10" heads (ASSUMED: crown R = Di, knuckle r = 0.10 Di; to confirm), 3 baffles (positions TBD).
 - Trailer: 4 axles, spacings 2450 / 1250 / 1250 mm; kingpin 750 mm from the front (reference to confirm);
   loads: kingpin 12,500 kg, axle 1 = 10,000 kg, axles 2-4 = 25,500 kg together (spoken "33.500" then corrected to 35.500 total).
-- Axle positions are computed by moment balance about the kingpin, with CG at the tank's geometric centre (ASSUMED).
+- Axle positions are computed by moment balance about the kingpin. CG is ASSUMED at 5,030 mm from the kingpin, taken from a reference study the owner supplied only as a basis (Pastre 45,000 L, 4E chassis, 10/2015; reference E1 at 4,540 mm from kingpin, kingpin 13.5 t). The engineer replaces it with the real CG.
 - Baffles go at the suspension supports (stiffness), so their positions follow the axle positions.
 
 ## Known issues

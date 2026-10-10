@@ -104,7 +104,7 @@ def build_drawing(spec: ShellSpec, axles: AxleSpec | None = None) -> ezdxf.docum
         f"Capacidade interna {capacidade_litros(spec):,.0f} L ({litros_por_cm(spec):.1f} L/cm)",
         f"Pino rei a {axles.kingpin_from_front_mm:g} mm da calota dianteira; cargas: pino {axles.kingpin_load_kg:g} kg, "
         f"eixos {', '.join(f'{w:g}' for w in axles.axle_loads_kg)} kg",
-        "Posicao dos eixos: equilibrio de momentos com CG no centro geometrico (ASSUMIDO)",
+        f"Posicao dos eixos: equilibrio de momentos, CG a {axles.cg_from_kingpin_mm:g} mm do pino rei (ASSUMIDO, base: estudo de referencia)",
         "Quebra-ondas: 3, posicoes a definir. Unidades: mm. Escala 1:1 no modelo.",
     )
     for i, line in enumerate(notes):
