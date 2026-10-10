@@ -12,7 +12,9 @@ from src.axle_load import AxleSpec, axle_positions
 from src.presets import DEFAULT, get
 from src.tank_drawing import _all_arcs
 from src.tank_shell import ShellSpec, capacidade_litros, capacidade_nominal_litros, straight_length_for_capacity
-from src.trailer_3d import GearSpec
+from dataclasses import replace
+
+from src.trailer_3d import DetailSpec, GearSpec
 
 SCALE = 50
 SHEET_W, SHEET_H = 841 * SCALE, 594 * SCALE
@@ -23,7 +25,9 @@ DIM = "GA"
 LAYERS = (("OUTLINE", 7, "CONTINUOUS"), ("HIDDEN", 8, "DASHED"), ("CENTER", 1, "CENTER"), ("DIM", 3, "CONTINUOUS"),
           ("TEXT", 7, "CONTINUOUS"), ("ANEIS", 30, "CONTINUOUS"), ("QUEBRA_ONDAS", 1, "CONTINUOUS"),
           ("CHASSI", 94, "CONTINUOUS"), ("RODAS", 250, "CONTINUOUS"), ("SUSPENSAO", 8, "CONTINUOUS"),
-          ("PINO_REI", 1, "CONTINUOUS"), ("MOLDURA", 7, "CONTINUOUS"), ("TABELA", 7, "CONTINUOUS"), ("JUNCAO", 6, "CENTER"), ("SOLDA", 2, "CONTINUOUS"))
+          ("PINO_REI", 1, "CONTINUOUS"), ("MOLDURA", 7, "CONTINUOUS"), ("TABELA", 7, "CONTINUOUS"), ("JUNCAO", 6, "CENTER"), ("SOLDA", 2, "CONTINUOUS"),
+          ("REFORCO_VERM", 1, "CONTINUOUS"), ("REFORCOS_U", 255, "CONTINUOUS"), ("CAIXA", 9, "CONTINUOUS"),
+          ("TUBULACAO", 8, "CONTINUOUS"), ("PLACAS", 250, "CONTINUOUS"), ("PARACHOQUE", 94, "CONTINUOUS"))
 
 
 def _setup(doc):
@@ -73,7 +77,8 @@ class Sheet:
                 cx += w
 
 
-def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), name: str = DEFAULT) -> ezdxf.document.Drawing:
+def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), name: str = DEFAULT,
+             det: DetailSpec = DetailSpec()) -> ezdxf.document.Drawing:
     shell.check()
     pos = axle_positions(axles, shell)
     doc = ezdxf.new("R2018", setup=True)
@@ -115,9 +120,28 @@ def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), nam
            (X(0), Y(zc + ro) + 1900), TXT, "SOLDA")
     for x in ring_x:                                                     # outer rings / straps (orange)
         s.rect(X(x - 30), Y(zc - ro - 6), X(x + 30), Y(zc + ro + 6), "ANEIS")
-    for i, x in enumerate(baffle_x, 1):                                  # baffles (red, thick)
-        s.msp.add_line((X(x), Y(zc - ri)), (X(x), Y(zc + ri)), dxfattribs={"layer": "QUEBRA_ONDAS", "lineweight": 70})
-        s.text(f"QO{i}", (X(x) + 50, Y(zc + ri) + 90), TXT, "QUEBRA_ONDAS")
+    shell_b = replace(shell, inner_diameter=shell.inner_diameter - 2 * shell.head_thickness)
+    for i, x in enumerate(baffle_x, 1):                                  # dished baffles, convex to the front
+        for off in (0.0, shell.head_thickness):
+            for (c, rad, a1, a2) in _all_arcs(shell_b, off)[0::2]:        # front-head arcs only (top, bottom)
+                s.arc((X(x + c[0]), Y(zc + c[1])), rad, a1, a2, "QUEBRA_ONDAS")
+        s.line((X(x), Y(zc - ri)), (X(x), Y(zc + ri)), "QUEBRA_ONDAS")
+        s.text(f"QO{i}", (X(x) + 60, Y(zc + ri) + 90), TXT, "QUEBRA_ONDAS")
+        s.rect(X(x - det.u_width / 2), Y(zc - ro - 10), X(x + det.u_width / 2), Y(zc), "REFORCOS_U")   # external U
+    for x in shell.red_band_positions:                                   # red bands (function to confirm)
+        s.rect(X(x - det.red_band_width / 2), Y(zc - ro - 8), X(x + det.red_band_width / 2), Y(zc + ro + 8), "REFORCO_VERM")
+    top = zc + ro
+    s.rect(X(det.toolbox_x), Y(top - 60), X(det.toolbox_x + det.toolbox_len), Y(top + det.toolbox_h), "CAIXA")
+    for bxx in (det.toolbox_x + 250, det.toolbox_x + det.toolbox_len - 250):
+        s.circle((X(bxx), Y(top + det.toolbox_h - 80)), 25, "CAIXA")
+    s.rect(X(det.pipe_x - det.pipe_d / 2), Y(gear.rail_top_z), X(det.pipe_x + det.pipe_d / 2), Y(top), "TUBULACAO")
+    s.rect(X(det.pipe_x - 90), Y(top - 40), X(det.pipe_x + 90), Y(top + 160), "TUBULACAO")
+    pz = zc - ro + det.placard_above_bottom
+    s.rect(X(det.panel_x - 190), Y(pz - 150), X(det.panel_x + 190), Y(pz + 150), "PLACAS")
+    for dx in det.diamond_x:
+        d = 212
+        s.msp.add_lwpolyline([(X(dx), Y(pz) + d), (X(dx) + d, Y(pz)), (X(dx), Y(pz) - d), (X(dx) - d, Y(pz))],
+                             close=True, dxfattribs={"layer": "PLACAS"})
     bx = [0.0, *baffle_x]
     for p, q in zip(bx, bx[1:]):                                         # baffle positions from the front junction
         s.dim((X(p), Y(zc + ro)), (X(q), Y(zc + ro)), (0, Y(zc + ro) + 700))
@@ -126,7 +150,7 @@ def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), nam
         s.text(f"JUNCAO CORPO CILINDRICO / TAMPO {side}", (X(xj) + 90, Y(zc + ro + 380)), TXT, "JUNCAO", rotation=90)
     s.text(f"#{shell.shell_thickness:g} mm INOX", (X(L * 0.62), Y(zc + 500)), TXT_BIG)
     s.text(f"{round(capacidade_nominal_litros(shell), -2):.0f} L", (X(L * 0.45), Y(zc - 150)), TXT_BIG)
-    s.text("QUEBRA-ONDAS (QO): posicoes medidas na foto de referencia (+-100 mm); QO3 assumido no eixo 1", (X(0), Y(zc + ro) + 2300), TXT, "QUEBRA_ONDAS")
+    s.text("QUEBRA-ONDAS (QO) ASME 10, 4 mm, convexos para a frente: QO1 sobre o pe de apoio, QO2 = E1 + 500, QO3 = E2 + 600", (X(0), Y(zc + ro) + 2300), TXT, "QUEBRA_ONDAS")
 
     # --- chassis, kingpin, landing legs, bumper
     s.rect(X(x_front), Y(rz0), X(x_rear), Y(gear.rail_top_z), "CHASSI")
@@ -135,7 +159,8 @@ def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), nam
     lx = kp + gear.landing_leg_from_kingpin
     s.rect(X(lx - 70), Y(380), X(lx + 70), Y(rz0), "CHASSI")
     s.rect(X(lx - 200), Y(360), X(lx + 200), Y(380), "CHASSI")
-    s.rect(X(x_rear), Y(500), X(x_rear + 80), Y(1100), "CHASSI")                      # rear bumper bar
+    s.rect(X(x_rear), Y(500), X(x_rear + 100), Y(700), "PARACHOQUE")                  # rear bumper bar
+    s.rect(X(x_rear - 60), Y(rz0 - 0), X(x_rear + 100), Y(700), "PARACHOQUE")
 
     # --- axles, suspension, wheels, mudguards
     for i, x in enumerate(axle_x, 1):
@@ -180,7 +205,11 @@ def build_ga(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(), nam
         for d in (-1, 1):
             yc = sgn * gear.track / 2 + d * (gear.tire_width + gear.dual_gap) / 2
             s.rect(rx + yc - gear.tire_width / 2, G, rx + yc + gear.tire_width / 2, G + 2 * gear.tire_radius, "RODAS")
-    s.dim((rx - ro, Y(zc)), (rx + ro, Y(zc)), (0, Y(zc + ro) + 500))
+    s.rect(rx - det.toolbox_w / 2, Y(zc + ro - 60), rx + det.toolbox_w / 2, Y(zc + ro + det.toolbox_h), "CAIXA")
+    s.rect(rx - 1100, Y(500), rx + 1100, Y(700), "PARACHOQUE")
+    for sgn in (-1, 1):
+        s.rect(rx + sgn * 1000 - 50, Y(700), rx + sgn * 1000 + 50, Y(rz0), "PARACHOQUE")
+    s.dim((rx - ro, Y(zc)), (rx + ro, Y(zc)), (0, Y(zc + ro) + 900))
     s.dim((rx - gear.track / 2, G), (rx + gear.track / 2, G), (0, G - 900))
     half_w = gear.track / 2 + gear.tire_width + gear.dual_gap / 2
     s.dim((rx - half_w, G), (rx + half_w, G), (0, G - 1500))

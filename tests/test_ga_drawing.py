@@ -43,12 +43,17 @@ def test_last_axle_to_rear_junction_is_1500(doc):
     assert SHELL.straight_length - pos["axle_x"][-1] == 1500
 
 
-def test_baffle_lines_and_position_dimensions(doc):
+def test_baffle_positions_follow_owner_rule(doc):
     xs = sorted(round(l.dxf.start.x - 5000) for l in doc.modelspace().query("LINE")
                 if l.dxf.layer == "QUEBRA_ONDAS")
-    assert xs == [2060, 4040, 5950]
+    assert xs == [3200, 6450, 9000]   # over the landing leg, axle 1 + 500, axle 2 + 600
     vals = {round(e.get_measurement()) for e in doc.modelspace().query("DIMENSION")}
-    assert {2060, 1980, 1910} <= vals
+    assert {3200, 3250, 2550} <= vals
+
+
+def test_details_present(doc):
+    layers = {e.dxf.layer for e in doc.modelspace()}
+    assert {"CAIXA", "TUBULACAO", "PLACAS", "PARACHOQUE", "REFORCOS_U", "REFORCO_VERM"} <= layers
 
 
 def test_weld_seams_and_plate_dimensions(doc):

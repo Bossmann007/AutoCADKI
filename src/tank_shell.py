@@ -5,7 +5,7 @@ Thicknesses are INPUTS; they are not derived from Portaria INMETRO 134/2022 Anex
 Head type "ASME 10" is ASSUMED to mean crown radius = 1.0 x Di, knuckle radius = 0.10 x Di
 (confirm with the engineer). Straight flange of the heads is not modelled.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import atan2, cos, pi, radians, sin, sqrt
 
 import cadquery as cq
@@ -26,6 +26,7 @@ class ShellSpec:
     capacity_factor: float = 1.025     # geometric net volume / nominal capacity (hand sketch)
     baffle_positions: tuple = ()       # x from the front junction (mm); empty = default assumption (at the suspension)
     ring_positions: tuple = ()         # outer rings/straps, same reference; empty = evenly spaced default
+    red_band_positions: tuple = ()     # outer red bands seen in the photo (function to confirm), same reference
     plate_length: float = 1200.0       # shell plates (chapas), counted from the front head weld; last one is the remainder
 
     def check(self) -> None:
@@ -170,6 +171,16 @@ def build_plates(spec: ShellSpec) -> list:
         out.append(cq.Workplane("YZ").circle(spec.ri + spec.shell_thickness).circle(spec.ri).extrude(ln).translate((x, 0, 0)))
         x += ln
     return out
+
+
+def build_baffle(spec: ShellSpec, hole: float = 500.0) -> cq.Workplane:
+    """Baffle (quebra-onda): torispherical "ASME 10" dished plate, head thickness, fitting inside the shell,
+    with a central passage opening (Anexo H: >= 500 mm). Edge at x=0, dish bulging toward -x (front)."""
+    spec.check()
+    b = replace(spec, inner_diameter=spec.inner_diameter - 2 * spec.head_thickness)   # outer radius == shell inner radius
+    plate = _revolve(_head_shell_profile(b))
+    apex = -(b.head_depth_inner + b.head_thickness)
+    return plate.cut(cq.Workplane("YZ").circle(hole / 2).extrude(40).translate((apex - 1, 0, 0)))
 
 
 def cavity(spec: ShellSpec) -> cq.Workplane:

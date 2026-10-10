@@ -55,10 +55,31 @@ def test_52k_baffles_and_rings_follow_photo_positions():
 
     shell, axles = get("52k")
     g = build_trailer(shell, axles)
-    bx = sorted(round(wp.val().Center().x) for wp in g["QUEBRA_ONDAS"])
-    assert bx == [2060, 4040, 5950]
+    bx = sorted(round(wp.val().BoundingBox().xmax) for wp in g["QUEBRA_ONDAS"])   # edge of each dish
+    assert bx == [3200, 6450, 9000]
+    assert len(g["REFORCOS_U"]) == 3 and len(g["REFORCO_VERM"]) == 2
     assert sorted(round(wp.val().Center().x) for wp in g["ANEIS"]) == [round(x) for x in shell.ring_positions]
-    assert round(axle_positions(axles, shell)["axle_x"][0]) == 5950   # 3rd baffle sits on axle 1
+    pos = axle_positions(axles, shell)
+    assert bx[0] == round(pos["kingpin_x"] + 2500)                    # QO1 over the landing leg
+    assert bx[1] == round(pos["axle_x"][0] + 500) and bx[2] == round(pos["axle_x"][1] + 600)
+
+
+def test_baffles_are_dished_convex_to_the_front_with_a_passage_opening():
+    from src.presets import get
+    from src.tank_shell import build_baffle
+
+    shell, _ = get("52k")
+    b = build_baffle(shell, 500.0)
+    bb = b.val().BoundingBox()
+    assert b.val().isValid() and len(b.solids().vals()) == 1
+    assert bb.xmax == pytest.approx(0, abs=0.01) and bb.xmin < -300      # edge at x=0, apex toward the front (-x)
+    assert bb.ylen == pytest.approx(shell.inner_diameter, abs=0.1)       # fits the shell
+    # the opening: no material on the axis at the apex
+    from OCP.BRepClass3d import BRepClass3d_SolidClassifier
+    from OCP.gp import gp_Pnt
+    from OCP.TopAbs import TopAbs_OUT
+    c = BRepClass3d_SolidClassifier(b.val().wrapped, gp_Pnt(bb.xmin + 5, 0, 0), 1e-6)
+    assert c.State() == TopAbs_OUT
 
 
 def test_landing_legs_2500_from_kingpin(groups):
@@ -79,6 +100,6 @@ def test_dxf_has_hidden_smooth_edges_and_layers(groups, tmp_path):
     assert not aud.has_errors
     faces = list(doc.modelspace().query("3DFACE"))
     assert len(faces) == n
-    assert {f.dxf.layer for f in faces} == set(groups)
+    assert {f.dxf.layer for f in faces} == {k for k, v in groups.items() if v}   # empty groups write no faces
     hidden = sum(bin(f.dxf.invisible_edges).count("1") for f in faces)
     assert hidden > len(faces)          # most interior edges hidden

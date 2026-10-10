@@ -10,7 +10,23 @@ from math import cos, radians
 import cadquery as cq
 
 from src.axle_load import AxleSpec, axle_positions
-from src.tank_shell import ShellSpec, build_parts, build_plates
+from src.tank_shell import ShellSpec, build_baffle, build_parts, build_plates
+
+
+@dataclass(frozen=True)
+class DetailSpec:
+    """Details copied from the owner's colour photo. Positions from the front junction (mm), ASSUMED +-150 mm."""
+    toolbox_x: float = 5150.0          # box on top of the tank (function to confirm)
+    toolbox_len: float = 1500.0
+    toolbox_w: float = 600.0
+    toolbox_h: float = 300.0
+    pipe_x: float = 7150.0             # vertical pipe/ladder on the side, valve at the top
+    pipe_d: float = 76.0
+    panel_x: float = 10075.0           # hazard panel (painel de seguranca) centre
+    diamond_x: tuple = (10540.0, 11015.0)   # hazard labels (rotulos de risco) centres
+    placard_above_bottom: float = 500.0     # height of the placards above the tank bottom
+    u_width: float = 120.0             # U-shaped external reinforcement at each baffle (lower half ring)
+    red_band_width: float = 40.0
 
 
 @dataclass(frozen=True)
@@ -40,7 +56,8 @@ def _cyl_y(x, y, z, r, w) -> cq.Workplane:
     return cq.Workplane("XZ").circle(r).extrude(w / 2, both=True).translate((x, y, z))
 
 
-def build_trailer(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec()) -> dict[str, list[cq.Workplane]]:
+def build_trailer(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec(),
+                  det: DetailSpec = DetailSpec()) -> dict[str, list[cq.Workplane]]:
     shell.check()
     pos = axle_positions(axles, shell)
     kp, axle_x = pos["kingpin_x"], pos["axle_x"]
@@ -48,7 +65,8 @@ def build_trailer(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec()
     x_front, x_rear = kp - 300.0, axle_x[-1] + axles.chassis_rear_overhang_mm
     half = gear.rail_spacing / 2
     rz0 = gear.rail_top_z - gear.rail_height
-    g: dict[str, list] = {k: [] for k in ("TANQUE", "ANEIS", "QUEBRA_ONDAS", "CHASSI", "PINO_REI", "EIXOS",
+    g: dict[str, list] = {k: [] for k in ("TANQUE", "ANEIS", "REFORCO_VERM", "REFORCOS_U", "QUEBRA_ONDAS", "CAIXA",
+                                          "TUBULACAO", "PLACAS", "CHASSI", "PARACHOQUE", "PINO_REI", "EIXOS",
                                           "SUSPENSAO", "RODAS", "PARALAMAS")}
 
     parts = build_parts(shell)
@@ -61,9 +79,30 @@ def build_trailer(shell: ShellSpec, axles: AxleSpec, gear: GearSpec = GearSpec()
     for x in ring_x:                                                  # outer rings / straps
         g["ANEIS"].append(cq.Workplane("YZ").circle(ro + gear.ring_thickness).circle(ro).extrude(gear.ring_width)
                           .translate((x - gear.ring_width / 2, 0, zc)))
-    for x in baffle_x:                                                # baffles
-        g["QUEBRA_ONDAS"].append(cq.Workplane("YZ").circle(shell.ri).circle(gear.baffle_hole / 2).extrude(3)
-                                 .translate((x - 1.5, 0, zc)))
+    for x in baffle_x:                                                # dished baffles + external U reinforcement
+        g["QUEBRA_ONDAS"].append(build_baffle(shell, gear.baffle_hole).translate((x, 0, zc)))
+        u = (cq.Workplane("YZ").circle(ro + 10).circle(ro).extrude(det.u_width).translate((x - det.u_width / 2, 0, 0))
+             .intersect(_box(x - det.u_width, x + det.u_width, -ro - 20, ro + 20, -ro - 20, 0)))
+        g["REFORCOS_U"].append(u.translate((0, 0, zc)))
+    for x in shell.red_band_positions:
+        g["REFORCO_VERM"].append(cq.Workplane("YZ").circle(ro + 8).circle(ro).extrude(det.red_band_width)
+                                 .translate((x - det.red_band_width / 2, 0, zc)))
+    top = zc + ro
+    g["CAIXA"].append(_box(det.toolbox_x, det.toolbox_x + det.toolbox_len, -det.toolbox_w / 2, det.toolbox_w / 2,
+                           top - 60, top + det.toolbox_h))
+    g["TUBULACAO"].append(cq.Workplane("XY").circle(det.pipe_d / 2).extrude(top - gear.rail_top_z)
+                          .translate((det.pipe_x, ro + 60, gear.rail_top_z)))
+    g["TUBULACAO"].append(_box(det.pipe_x - 90, det.pipe_x + 90, ro - 30, ro + 150, top - 40, top + 160))   # top valve
+    pz = zc - ro + det.placard_above_bottom
+    g["PLACAS"].append(_box(det.panel_x - 190, det.panel_x + 190, ro, ro + 6, pz - 150, pz + 150))
+    for dx in det.diamond_x:
+        sq = _box(dx - 150, dx + 150, ro, ro + 6, pz - 150, pz + 150)
+        g["PLACAS"].append(sq.rotate((dx, 0, pz), (dx, 1, pz), 45))
+    xb = x_rear
+    g["PARACHOQUE"].append(_box(xb, xb + 100, -1100, 1100, 500, 700))                 # rear bumper bar
+    for s in (-1, 1):
+        g["PARACHOQUE"].append(_box(xb - 60, xb + 100, s * 1000 - 50, s * 1000 + 50, 700, rz0))   # posts
+        g["PARACHOQUE"].append(_box(xb + 100, xb + 160, s * 950 - 60, s * 950 + 60, 560, 640))    # lights
 
     for s in (-1, 1):
         y0, y1 = sorted((s * half - gear.rail_width / 2, s * half + gear.rail_width / 2))
@@ -121,12 +160,14 @@ def smooth_flags(verts, tris, angle_deg: float = 15.0) -> list[int]:
     return flags
 
 
-LAYER_COLORS = {"TANQUE": 254, "ANEIS": 30, "QUEBRA_ONDAS": 1, "CHASSI": 94, "PINO_REI": 1, "EIXOS": 3,
+LAYER_COLORS = {"TANQUE": 254, "ANEIS": 30, "REFORCO_VERM": 1, "REFORCOS_U": 255, "CAIXA": 9, "TUBULACAO": 8,
+                "PLACAS": 250, "PARACHOQUE": 94, "QUEBRA_ONDAS": 1, "CHASSI": 94, "PINO_REI": 1, "EIXOS": 3,
                 "SUSPENSAO": 8, "RODAS": 250, "PARALAMAS": 94}
 
 
 # (linear tolerance mm, angular tolerance rad) per layer: fine on the tank, coarse on small parts
-MESH_QUALITY = {"TANQUE": (1.5, 0.1), "ANEIS": (2.0, 0.15), "QUEBRA_ONDAS": (2.0, 0.15), "RODAS": (3.0, 0.3),
+MESH_QUALITY = {"REFORCO_VERM": (2.0, 0.15), "REFORCOS_U": (2.0, 0.15), "CAIXA": (5.0, 0.5), "TUBULACAO": (2.0, 0.3),
+                "PLACAS": (5.0, 0.5), "PARACHOQUE": (5.0, 0.5), "TANQUE": (1.5, 0.1), "ANEIS": (2.0, 0.15), "QUEBRA_ONDAS": (2.0, 0.15), "RODAS": (3.0, 0.3),
                 "CHASSI": (5.0, 0.5), "PINO_REI": (1.0, 0.3), "EIXOS": (5.0, 0.5), "SUSPENSAO": (5.0, 0.5),
                 "PARALAMAS": (3.0, 0.3)}
 
