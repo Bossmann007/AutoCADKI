@@ -1,26 +1,28 @@
 import pytest
 from ezdxf import recover
 
+from src.axle_load import AxleSpec, axle_positions
 from src.tank_drawing import build_drawing
 from src.tank_shell import ShellSpec
 
-S = ShellSpec()
+S, A = ShellSpec(), AxleSpec()
 
 
 @pytest.fixture(scope="module")
 def doc(tmp_path_factory):
     path = tmp_path_factory.mktemp("dxf") / "t.dxf"
-    build_drawing(S).saveas(path)
+    build_drawing(S, A).saveas(path)
     d, auditor = recover.readfile(path)
     assert not auditor.has_errors
     return d
 
 
 def test_dimension_values_match_spec(doc):
+    pos = axle_positions(A, S)
+    expected = [S.head_depth_outer, S.straight_length, S.head_depth_outer, pos["kingpin_to_axle1"],
+                *A.spacings_mm, S.overall_length, S.inner_diameter, S.inner_diameter]
     vals = sorted(round(e.get_measurement()) for e in doc.modelspace().query("DIMENSION"))
-    expected = sorted(round(v) for v in (S.head_depth, S.length, S.head_depth,
-                                          S.length + 2 * S.head_depth, S.height, S.width))
-    assert vals == expected
+    assert vals == sorted(round(v) for v in expected)
 
 
 def test_every_dimension_has_rendered_block(doc):
@@ -30,11 +32,12 @@ def test_every_dimension_has_rendered_block(doc):
 
 def test_layers_and_version(doc):
     assert doc.dxfversion == "AC1032"
-    assert {"OUTLINE", "HIDDEN", "CENTER", "DIM", "TEXT"} <= {l.dxf.name for l in doc.layers}
+    assert {"OUTLINE", "HIDDEN", "CENTER", "DIM", "TEXT", "SUSPENSION"} <= {l.dxf.name for l in doc.layers}
 
 
-def test_hidden_wall_is_inside_outline(doc):
-    def widest(layer):
-        return max(e.dxf.major_axis.magnitude for e in doc.modelspace().query("ELLIPSE") if e.dxf.layer == layer)
-
-    assert widest("HIDDEN") == pytest.approx(widest("OUTLINE") - S.thickness)
+def test_head_arcs_present_and_nested(doc):
+    arcs = list(doc.modelspace().query("ARC"))
+    assert len(arcs) == 16  # 2 arcs x (top, bottom) x (front, rear) x (outer, inner)
+    outer = max(a.dxf.radius for a in arcs if a.dxf.layer == "OUTLINE")
+    inner = max(a.dxf.radius for a in arcs if a.dxf.layer == "HIDDEN")
+    assert outer - inner == pytest.approx(S.head_thickness)
