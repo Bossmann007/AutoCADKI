@@ -3,3 +3,7 @@
 .claude/state/failures.jsonl
 .claude/state/observability.jsonl
 .DS_Store
+.venv/
+out/
+__pycache__/
+.pytest_cache/
