@@ -19,7 +19,10 @@ Method approved by the engineer for CM070 (2026-10-19). Reference implementation
 ## Steps
 
 1. Transcribe. Zoom the photos (PIL crop + resize) and write a table: value | from where | to where. Read every
-   number, also the small and circled ones. Show the table to the user before drawing.
+   number, also the small and circled ones.
+   **Gate (mandatory): show the table and STOP. Do not draw until the user explicitly confirms the table.**
+   Handwriting can be misread (7 vs 1, 2,43 vs 2,44); this confirmation is the only guarantee. If the user
+   corrects a value, show the corrected table again and wait for a new confirmation.
 2. Check the chain. front -> kingpin + kingpin -> axle 1 + axle gaps + last axle -> rear must equal the total.
    If it does not close, ask which value is wrong. Do not hide the difference.
 3. Conventions learned on CM069/CM070:
