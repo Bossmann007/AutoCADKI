@@ -15,6 +15,9 @@ Method approved by the engineer for CM070 (2026-10-19). Reference implementation
   chassis numbers, ARTs, engineer data or the drawings.
 - Copy the layout of the previous CM drawing: overall length on top, kingpin chains above the chassis, axle chain
   below, chassis heights as vertical dimensions, title block bottom-left, code bottom-right and in the title block.
+- Every image or PDF sent to the user has a WHITE background with black lines (user rule, 2026-10-20). CADCraft's
+  own PNG/PDF exports are dark: always make the deliverables with `scripts/white_export.py` (DXF -> SVG -> vector
+  A3 PDF + 300 dpi PNG). Renders and screenshots also go on a white background.
 
 ## Steps
 
@@ -38,7 +41,9 @@ Method approved by the engineer for CM070 (2026-10-19). Reference implementation
    drawing does not need to be proportional.
 5. Title block (from the user, every time): title, CHASSI, Eng. Mec. name, CREA, ARTs, code (CMxxx).
 6. Verify before sending: read the DXF back with ezdxf (`recover.readfile`, no audit errors), compare every
-   dimension value with the table, render the PNG and look at it. Send PNG + PDF + DWG with SendUserFile.
+   dimension value with the table. Make the white exports:
+   `uvx --with svglib --with reportlab --with pymupdf python .claude/skills/desenho-cm/scripts/white_export.py
+   out/X.dxf --out out/branco`, look at the PNG, then send the white PNG + PDF and the DWG with SendUserFile.
 7. Report what was checked and what was not (e.g. DWG not opened in AutoCAD).
 
 ## 3D model and video (same dimension table)
