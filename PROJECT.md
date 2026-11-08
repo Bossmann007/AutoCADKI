@@ -39,6 +39,7 @@ Research in `docs/research/`. `src/tank_shell.py`: parametric tank shell (oval s
 | 2026-10-10 | MVP target: tank trailer (carreta tanque) | User choice |
 | 2026-10-10 | Shell thickness is an input, not computed from Anexo H | Tables depend on cargo group, density, l/cm, L; engineer reviews at the end |
 | 2026-10-10 | Deliverable format includes DWG (not only DXF) | User requirement; see docs/research/ai-cad-trailers.md §5 |
+| 2026-11-08 | Projeto vira Hephaestus dentro do AutoCADKI: assistente do Nonno (Claude + skills), depois ML; FreeCAD + freecad-mcp para peças no Mac | Enzo; plano v2 revisado por Maria, Do Contra e Operations Planner (docs/PLAN.md) |
 
 ## Project inputs (TEST project; numbers come from the owner's documents, not absolute truths)
 
