@@ -56,6 +56,18 @@ Tools installed 2026-10-19 (all free):
   The PyPI package named `blender-mcp` is a different, unofficial project: do not use it.
 
 Steps:
+0. Model from photos or reference renders ("deixar igual", "100% igual"): zoom and crop each part of every reference,
+   write the dimension table with the source of each value (photo, user, SUPOSTO) and get the user's explicit ok
+   before modelling. Do not assume an existing chassis (lesson of 2026-11-08: the tank was not the CM070).
+   For every reference, render the model with the camera at the same angle and side and compare side by side.
+   - Measure first: for a bought part (lamp, light, fender, valve) ask the user for its model or the maker's data
+     sheet, or a straight photo with a tape measure; never model a part from a guess.
+   - Match the camera with fSpy (`/Applications/fSpy.app`, needs Rosetta): the user marks the vanishing lines and a
+     known length on the photo, saves `local/<proj>/refs/<photo>.fspy`; import it in Blender with
+     `bpy.ops.fspy_blender.import_project(filepath=...)` (add-on `fspy_blender` 1.0.3, tested on Blender 5.2.3). This
+     gives the photo's camera and the photo as camera background; model and compare through that camera.
+   - Proof before "pronto": save `local/<proj>/compare/<part>_vN.png` = photo crop | render from the matched camera,
+     side by side, look at it, list what still differs and fix it. Send the user only a comparison that matches.
 1. Model with the `cad` skill: build the trailer in build123d from the approved dimension table (chassis profile
    with 225/445 heights and slope, kingpin, landing leg, axles at the chain positions, wheels, ABS). Real 1:1 mm.
    Save in `local/<cm>/3d/` (git-ignored). Export GLB (for Blender) and STEP.
@@ -67,3 +79,10 @@ Steps:
    previews), turntable and camera moves for video (Cycles/EEVEE, ffmpeg output to `local/<cm>/video/`).
 5. Safety: the Blender MCP runs generated Python with no guard. Work only on new or copied .blend files in `local/`,
    never on the user's other files.
+6. Before showing renders: run the model checks and an interference check (`local/<job>/3d/checks/`), exit 0.
+   A check must measure the real part (e.g. the axle tube, not the whole axle assembly).
+7. Background: white by default (rule of 2026-10-20). A dark studio like the references only when the user asks
+   for the renders to match them.
+8. Tools: cadgen no longer exports `cadgen.build123d`; use `import build123d as bd`. If the Blender MCP times out
+   during a render, wait for the output file instead of re-running; if Blender closed, reopen the saved .blend with
+   `--online-mode`.
