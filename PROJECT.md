@@ -13,6 +13,9 @@ what is feasible, and what output formats a trailer shop needs.
 
 - Language: Python 3.12
 - Framework: CadQuery 2.x (OCCT B-rep), pytest
+- 2D chassis drawings: CADCraft (`~/.local/bin/cadcraft-cli`, MCP `cadcraft`)
+- 3D models for drawings and renders: build123d through cadgen (text-to-cad plugin), `cadgen run <model>.py`
+- Presentation renders: Blender 5.2 + official Blender Lab MCP v1.0.3
 - Package manager: uv (`.venv/`, git-ignored)
 
 ## Commands
@@ -25,7 +28,7 @@ mkdir -p out && .venv/bin/python -m src.tank_shell   # writes out/tank_shell.ste
 
 ## Architecture
 
-Research in `docs/research/`. `src/tank_shell.py`: parametric tank shell (oval section + half-ellipsoid heads, thickness as input). Next: nozzles/manholes, baffles, chassis, DXF drawings. All dimensions are placeholders until the reviewing engineer sets them.
+Research in `docs/research/`. `src/tank_shell.py`: parametric tank shell (cylinder + torispherical "ASME 10" heads, thickness as input). Per-job work (CM chassis drawings, 3D models, renders) lives in `local/<project>/` (git-ignored) and follows `.claude/skills/desenho-cm/SKILL.md`. Next: nozzles/manholes, baffles, chassis, DXF drawings. All dimensions are placeholders until the reviewing engineer sets them.
 
 ## Conventions
 
@@ -39,7 +42,12 @@ Research in `docs/research/`. `src/tank_shell.py`: parametric tank shell (oval s
 | 2026-10-10 | MVP target: tank trailer (carreta tanque) | User choice |
 | 2026-10-10 | Shell thickness is an input, not computed from Anexo H | Tables depend on cargo group, density, l/cm, L; engineer reviews at the end |
 | 2026-10-10 | Deliverable format includes DWG (not only DXF) | User requirement; see docs/research/ai-cad-trailers.md §5 |
+| 2026-10-19 | CM070 drawing method approved by the engineer (dimension chain kept in `local/cm070/`; 3-axle version = same trailer without the middle axle) | Engineer, via Enzo |
+| 2026-10-20 | Mandatory gate: the dimension table is confirmed before drawing (PR #7); every print/render sent to Enzo on a white background | Enzo |
 | 2026-11-08 | Projeto vira Hephaestus dentro do AutoCADKI: assistente do Nonno (Claude + skills), depois ML; FreeCAD + freecad-mcp para peças no Mac | Enzo; plano v2 revisado por Maria, Do Contra e Operations Planner (docs/PLAN.md) |
+| 2026-11-08 | Stainless tank job from `raw/` is its own trailer, not the CM070: polished stainless tank, rear panel stainless with the logo cut out over blue, chassis blue, top guard rail folded | Enzo; all tank dimensions still SUPOSTO (no drawing) |
+| 2026-11-09 | Tank logo uses the Michroma font (SIL OFL), kept in `local/` | Closest free match to the logo; Enzo approved the download |
+| 2026-11-09 | The `raw/` stainless tank is the 52k preset (TANQUE_PASTRE_52M3): rows 2-12 of `local/tanque_inox/ref_crops/tabela_medidas.md` use its values; renders for this job on the dark studio background | Enzo; the full table still waits for his ok before modelling |
 
 ## Project inputs (TEST project; numbers come from the owner's documents, not absolute truths)
 
@@ -68,7 +76,9 @@ Two presets in `src/presets.py` (default `52k`); the engineer replaces everythin
 
 ## Known issues
 
-- 
+- cadgen (0.8.x, Python 3.13) no longer exports `cadgen.build123d` / `cadgen.srgb`: use `import build123d as bd` and a local `srgb`. Fixed in `local/cm070/3d/cm070_3d.py` on 2026-11-09 (`cadgen run` exit 0, `check_model.py` 20/20).
+- Local scripts need Python 3.12+ (`str | None` fails on the system python3 3.9).
+- `scripts/verify` runs every `local/*/3d/checks/check_*.py` and `interference.py` when they exist (about 2 min with the tank interference check).
 
 ## Current work
 

@@ -6,4 +6,22 @@ if git ls-files | grep -v '^docs/sources/' | grep -i -E '\.(dwg|dxf|step|stp|jpg
   echo "verify: arquivo de cliente ou segredo versionado (acima); só docs/sources/ pode ter PDF ou imagem pública"; exit 1
 fi
 .venv/bin/python -m pytest -q
+
+# Checks dos trabalhos em local/ (fora do git): rodam só quando existem nesta máquina.
+shopt -s nullglob
+local_checks=(local/*/3d/checks/check_*.py local/*/3d/checks/interference.py)
+if (( ${#local_checks[@]} )); then
+  if ! command -v cadgen >/dev/null; then
+    echo "verify: há checks em local/ mas o cadgen não está instalado"; exit 1
+  fi
+  for c in "${local_checks[@]}"; do
+    echo "verify: cadgen run $c"
+    if ! cadgen run "$c" >/tmp/verify_check.$$ 2>&1; then
+      tail -20 /tmp/verify_check.$$; rm -f /tmp/verify_check.$$
+      echo "verify: falhou em $c"; exit 1
+    fi
+    tail -1 /tmp/verify_check.$$
+  done
+  rm -f /tmp/verify_check.$$
+fi
 echo "verify: passou"
