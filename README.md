@@ -53,5 +53,4 @@ Peça comprada (lanterna, para-lama, válvula): pedir o modelo ou a ficha técni
 
 ## Como verificar
 
-- `scripts/verify`: exit 0 = os testes passaram e nenhum arquivo de cliente está versionado (exceto as normas públicas em `docs/sources/`).
-- Trabalhos em `local/` (fora do git): rodar os checks do passo 4 acima e mostrar o exit code.
+- `scripts/verify`: exit 0 = os testes passaram, nenhum arquivo de cliente está versionado (exceto as normas públicas em `docs/sources/`) e, nesta máquina, todos os checks de `local/*/3d/checks/` (check_*.py e interference.py) passaram. Sem `local/`, esses checks são pulados.

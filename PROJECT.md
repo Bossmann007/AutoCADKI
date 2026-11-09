@@ -47,6 +47,7 @@ Research in `docs/research/`. `src/tank_shell.py`: parametric tank shell (cylind
 | 2026-11-08 | Projeto vira Hephaestus dentro do AutoCADKI: assistente do Nonno (Claude + skills), depois ML; FreeCAD + freecad-mcp para peças no Mac | Enzo; plano v2 revisado por Maria, Do Contra e Operations Planner (docs/PLAN.md) |
 | 2026-11-08 | Stainless tank job from `raw/` is its own trailer, not the CM070: polished stainless tank, rear panel stainless with the logo cut out over blue, chassis blue, top guard rail folded | Enzo; all tank dimensions still SUPOSTO (no drawing) |
 | 2026-11-09 | Tank logo uses the Michroma font (SIL OFL), kept in `local/` | Closest free match to the logo; Enzo approved the download |
+| 2026-11-09 | The `raw/` stainless tank is the 52k preset (TANQUE_PASTRE_52M3): rows 2-12 of `local/tanque_inox/ref_crops/tabela_medidas.md` use its values; renders for this job on the dark studio background | Enzo; the full table still waits for his ok before modelling |
 
 ## Project inputs (TEST project; numbers come from the owner's documents, not absolute truths)
 
@@ -75,10 +76,9 @@ Two presets in `src/presets.py` (default `52k`); the engineer replaces everythin
 
 ## Known issues
 
-- cadgen removed `cadgen.build123d` / `cadgen.srgb`: `local/cm070/3d/cm070_3d.py` still imports them and fails (`cadgen run` → ImportError, checked 2026-11-09); the tank model works around it with a shim.
-- Local scripts need Python 3.12 (`str | None` fails on the system python3 3.9).
-- `scripts/verify` does not run the checks in `local/`; run them by hand (README, "Fluxo de trabalho").
-- Tank renders: dark studio background copied from the references conflicts with the white-background rule; confirm per job.
+- cadgen (0.8.x, Python 3.13) no longer exports `cadgen.build123d` / `cadgen.srgb`: use `import build123d as bd` and a local `srgb`. Fixed in `local/cm070/3d/cm070_3d.py` on 2026-11-09 (`cadgen run` exit 0, `check_model.py` 20/20).
+- Local scripts need Python 3.12+ (`str | None` fails on the system python3 3.9).
+- `scripts/verify` runs every `local/*/3d/checks/check_*.py` and `interference.py` when they exist (about 2 min with the tank interference check).
 
 ## Current work
 
