@@ -12,6 +12,20 @@ O Nonno (engenheiro de carretas) faz o trabalho dele com o próprio Claude; o En
 
 Um desenho real, do tipo de carreta que ele mais faz, de ponta a ponta e assinado por ele, em até 3 semanas depois do início, com o tempo dele medido antes e depois.
 
+## O produto é o harness, não um modelo treinado (Enzo, 13/11/2026)
+
+Não há dataset público de croqui de carreta (prior-art de 08/11: DeepCAD, ABC, SketchGraphs e afins são CAD sintético,
+alguns não comerciais). Por isso a v1 não treina modelo: usa o Claude e garante o resultado com um harness que mede e
+bloqueia.
+
+- **Avaliação fixa:** 10 croquis antigos com medidas conhecidas, separados antes de ajustar qualquer skill; acerto por
+  campo da tabela, rodado a cada mudança de skill ou de modelo. Piora em qualquer campo bloqueia a mudança.
+- **Gates que bloqueiam o desenho:** campo SUPOSTO ou "?", cadeia de cotas que não fecha, tabela sem o "ok" do Nonno,
+  tipo de carreta fora do escolhido. Os checks de cotas e de tabela vêm do PR #10 (`checks/`).
+- **Saída conferida por código:** cada cota do DXF bate com a tabela aprovada; a soma da lista de materiais bate com a
+  tabela.
+- **Log de falhas:** cada correção do Nonno vira um caso novo na avaliação (com consentimento, em `local/`).
+
 ## v1: só a Camada 1 (assistente)
 
 Fluxo:
@@ -37,7 +51,7 @@ Suporte sem gargalo: o Enzo fica fora do caminho do pedido. Um canal só para tr
 
 ## Cortado da v1 (volta com dados)
 
-- Camada 2 (ML): volta quando houver pelo menos 30 croquis corrigidos de verdade; a linha de base continua sendo o Claude sem treino. Classificação e previsão do próximo passo saem.
+- Camada 2 (ML), ideia guardada (Enzo, 13/11/2026: não apagar): volta quando houver pelo menos 30 croquis corrigidos de verdade, que o log de falhas do harness vai juntando. A linha de base continua sendo o Claude com o harness, sem treino; o ML só entra se superar essa linha na mesma avaliação. Caminhos anotados no prior-art: adaptar CAD-Recode ou gerar pares sintéticos (modelo paramétrico → vistas em estilo de croqui). Classificação e previsão do próximo passo saem.
 - Orçamento, organizar pastas, DWG nativo e a ambição de produto para outras fábricas.
 
 ## Agenda (Maria)
