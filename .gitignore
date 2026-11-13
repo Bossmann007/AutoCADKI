@@ -9,3 +9,7 @@ __pycache__/
 .pytest_cache/
 local/
 .mcp.json
+
+# raw/: arquivos que o Enzo joga para a IA analisar (croquis, fotos, DWG, PDFs). Nada daqui vai para o git.
+raw/*
+!raw/README.md

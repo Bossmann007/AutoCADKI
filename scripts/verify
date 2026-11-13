@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Checagem única do AutoCADKI / Hephaestus: exit 0 = tudo passou.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if git ls-files | grep -v '^docs/sources/' | grep -i -E '\.(dwg|dxf|step|stp|jpg|jpeg|png|heic|pdf)$|(^|/)\.env$'; then
+  echo "verify: arquivo de cliente ou segredo versionado (acima); só docs/sources/ pode ter PDF ou imagem pública"; exit 1
+fi
+.venv/bin/python -m pytest -q
+echo "verify: passou"
